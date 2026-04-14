@@ -72,6 +72,9 @@
                     <div class="menu-item" onclick="navigateTo('settings')" data-page="settings">
                         <span class="menu-icon">⚙️</span> Settings
                     </div>
+                    <div class="menu-item" onclick="navigateTo('about')" data-page="about">
+                        <span class="menu-icon">ℹ️</span> About
+                    </div>
                     <div class="menu-item" onclick="handleLogout()" style="color: var(--danger);">
                         <span class="menu-icon">🚪</span> Logout
                     </div>
@@ -298,15 +301,28 @@
                         </div>
 
                         <div class="settings-group">
+                            <h3>🗑️ Data Management</h3>
+                            <p class="text-secondary" style="margin-bottom:16px; font-size:13px;">Clear your chat history and start fresh.</p>
+                            <button class="btn btn-danger" onclick="clearHistory()">Clear Chat History</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ═══════════════════════════════════
+                     PAGE: ABOUT
+                     ═══════════════════════════════════ -->
+                <div class="page-view" id="page-about">
+                    <div class="settings-section">
+                        <div class="settings-group">
                             <h3>ℹ️ About SupportGPT</h3>
-                            <p class="text-secondary" style="font-size:13px; line-height: 1.6;">
+                            <p class="text-secondary" style="font-size:14px; line-height: 1.6;">
                                 <strong>SupportGPT</strong> is a cutting-edge AI SaaS designed to streamline support systems using large language models. <br><br>
-                                <strong>🌟 Speciality:</strong> Unlike legacy systems, SupportGPT dynamically learns from your PDFs, ranks active contributors via Gamification, and resolves queries autonomously.<br>
+                                <strong>🌟 Speciality:</strong> Unlike legacy systems, SupportGPT dynamically learns from your PDFs, ranks active contributors via Gamification, and resolves queries autonomously.<br><br>
                                 <strong>🛠 How to Use & Debug:</strong> <br>
                                 1. Upload your documents in the <i>Upload Docs</i> tab.<br>
                                 2. Chat with the AI! It will reference your specific documents.<br>
                                 3. Support Issues? Just ask to create a ticket and developers will resolve it.<br>
-                                4. Facing Bugs? Paste the error log in the chat, the AI will diagnose it instantly.<br>
+                                4. Facing Bugs? Paste the error log in the chat, the AI will diagnose it instantly.<br><br>
                                 <strong>🏆 Contribute & Earn Points:</strong> Provide feedback on AI answers (👍/👎) to enhance our dataset. Top users earn points and achieve glory on the Leaderboard!
                             </p>
                         </div>
