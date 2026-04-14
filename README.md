@@ -1,3 +1,12 @@
+---
+title: SupportGPT Backend
+emoji: 📚
+colorFrom: gray
+colorTo: purple
+sdk: docker
+pinned: false
+license: mit
+---
 # 🚀 SupportGPT (Mini Zendesk + ChatGPT)
 
 ![SupportGPT](https://img.shields.io/badge/Status-Completed-success.svg) ![FastAPI](https://img.shields.io/badge/FastAPI-005571?style=flat&logo=fastapi) ![JavaScript](https://img.shields.io/badge/Vanilla_JS-F7DF1E?style=flat&logo=javascript&logoColor=black) ![Llama3](https://img.shields.io/badge/LLM-Groq_Llama3-blueviolet.svg)
