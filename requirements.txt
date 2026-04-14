@@ -1,0 +1,12 @@
+fastapi==0.104.1
+pydantic==2.5.0
+uvicorn[standard]
+sqlalchemy
+python-jose[cryptography]
+passlib[bcrypt]
+python-multipart
+groq
+PyPDF2
+python-dotenv
+Pillow
+pytesseract

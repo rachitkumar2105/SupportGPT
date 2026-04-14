@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SupportGPT - Login</title>
+    <meta name="description" content="AI-powered intelligent invoice processing and support system with automation">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="bg-glow"></div>
+    <div class="bg-glow-2"></div>
+
+    <!-- Toast Container -->
+    <div class="toast-container" id="toastContainer"></div>
+
+    <div class="auth-page">
+        <div class="auth-card glass-panel">
+            <div class="logo-section">
+                <span class="logo-icon">🧾</span>
+                <h1 class="logo-title text-gradient">SupportGPT</h1>
+                <p class="logo-subtitle">AI-Powered Support & Automation System</p>
+            </div>
+
+            <!-- Auth Tabs -->
+            <div class="auth-tabs">
+                <button class="auth-tab active" onclick="switchAuthTab('login')" id="tabLogin">Sign In</button>
+                <button class="auth-tab" onclick="switchAuthTab('signup')" id="tabSignup">Create Account</button>
+            </div>
+
+            <!-- Error / Success Messages -->
+            <div class="auth-error" id="authError"></div>
+            <div class="auth-success" id="authSuccess"></div>
+
+            <!-- Login Form -->
+            <div id="loginForm">
+                <div class="form-group">
+                    <label for="loginUsername">Username</label>
+                    <input id="loginUsername" type="text" placeholder="Enter your username" autocomplete="username">
+                </div>
+                <div class="form-group">
+                    <label for="loginPassword">Password</label>
+                    <input id="loginPassword" type="password" placeholder="Enter your password" autocomplete="current-password">
+                </div>
+                <button onclick="handleLogin()" class="btn btn-primary btn-block btn-lg" id="loginBtn">
+                    Sign In →
+                </button>
+            </div>
+
+            <!-- Signup Form -->
+            <div id="signupForm" class="hidden">
+                <div class="form-group">
+                    <label for="signupUsername">Username</label>
+                    <input id="signupUsername" type="text" placeholder="Choose a username (min 3 chars)" autocomplete="username">
+                </div>
+                <div class="form-group">
+                    <label for="signupEmail">Email (optional)</label>
+                    <input id="signupEmail" type="email" placeholder="your@email.com">
+                </div>
+                <div class="form-group">
+                    <label for="signupPassword">Password</label>
+                    <input id="signupPassword" type="password" placeholder="Choose a password (min 4 chars)" autocomplete="new-password">
+                </div>
+                <div class="form-group">
+                    <label>Select Your Role</label>
+                    <div class="role-selector">
+                        <div class="role-option active" onclick="selectRole('customer')" data-role="customer">
+                            <span class="role-emoji">🧑</span>
+                            Customer
+                        </div>
+                        <div class="role-option" onclick="selectRole('developer')" data-role="developer">
+                            <span class="role-emoji">👨‍💻</span>
+                            Developer
+                        </div>
+                    </div>
+                </div>
+                <button onclick="handleSignup()" class="btn btn-primary btn-block btn-lg" id="signupBtn">
+                    Create Account 🚀
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // [DEPLOYMENT] Update this with your Hugging Face space URL
+        const BACKEND_URL = "https://replace-with-huggingface-url.hf.space";
+        const API = window.location.hostname === '127.0.0.1' || window.location.hostname === 'localhost'
+            ? `http://127.0.0.1:8000`
+            : BACKEND_URL;
+
+        let selectedRole = 'customer';
+
+        // Redirect if already logged in
+        if (localStorage.getItem("token")) {
+            window.location.href = "dashboard.html";
+        }
+
+        function switchAuthTab(tab) {
+            const loginForm = document.getElementById('loginForm');
+            const signupForm = document.getElementById('signupForm');
+            const tabLogin = document.getElementById('tabLogin');
+            const tabSignup = document.getElementById('tabSignup');
+            const authError = document.getElementById('authError');
+            const authSuccess = document.getElementById('authSuccess');
+
+            authError.style.display = 'none';
+            authSuccess.style.display = 'none';
+
+            if (tab === 'login') {
+                loginForm.classList.remove('hidden');
+                signupForm.classList.add('hidden');
+                tabLogin.classList.add('active');
+                tabSignup.classList.remove('active');
+            } else {
+                loginForm.classList.add('hidden');
+                signupForm.classList.remove('hidden');
+                tabLogin.classList.remove('active');
+                tabSignup.classList.add('active');
+            }
+        }
+
+        function selectRole(role) {
+            selectedRole = role;
+            document.querySelectorAll('.role-option').forEach(el => el.classList.remove('active'));
+            document.querySelector(`[data-role="${role}"]`).classList.add('active');
+        }
+
+        function showAuthError(msg) {
+            const el = document.getElementById('authError');
+            el.textContent = msg;
+            el.style.display = 'block';
+            document.getElementById('authSuccess').style.display = 'none';
+        }
+
+        function showAuthSuccess(msg) {
+            const el = document.getElementById('authSuccess');
+            el.textContent = msg;
+            el.style.display = 'block';
+            document.getElementById('authError').style.display = 'none';
+        }
+
+        async function handleLogin() {
+            const username = document.getElementById('loginUsername').value.trim();
+            const password = document.getElementById('loginPassword').value.trim();
+            const btn = document.getElementById('loginBtn');
+
+            if (!username || !password) {
+                showAuthError('Please enter both username and password.');
+                return;
+            }
+
+            btn.disabled = true;
+            btn.textContent = 'Signing in...';
+
+            try {
+                const res = await fetch(API + "/login", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ username, password })
+                });
+
+                const data = await res.json();
+
+                if (res.ok && data.access_token) {
+                    localStorage.setItem("token", data.access_token);
+                    localStorage.setItem("username", data.username);
+                    localStorage.setItem("role", data.role);
+                    localStorage.setItem("points", data.points);
+                    showAuthSuccess('Login successful! Redirecting...');
+                    setTimeout(() => window.location.href = "dashboard.html", 800);
+                } else {
+                    showAuthError(data.detail || "Login failed. Please check your credentials.");
+                }
+            } catch (err) {
+                showAuthError("Cannot connect to server. Please ensure the backend is running.");
+            }
+
+            btn.disabled = false;
+            btn.textContent = 'Sign In →';
+        }
+
+        async function handleSignup() {
+            const username = document.getElementById('signupUsername').value.trim();
+            const email = document.getElementById('signupEmail').value.trim();
+            const password = document.getElementById('signupPassword').value.trim();
+            const btn = document.getElementById('signupBtn');
+
+            if (!username || !password) {
+                showAuthError('Username and password are required.');
+                return;
+            }
+
+            if (username.length < 3) {
+                showAuthError('Username must be at least 3 characters.');
+                return;
+            }
+
+            if (password.length < 4) {
+                showAuthError('Password must be at least 4 characters.');
+                return;
+            }
+
+            btn.disabled = true;
+            btn.textContent = 'Creating account...';
+
+            try {
+                const res = await fetch(API + "/signup", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ username, password, email, role: selectedRole })
+                });
+
+                const data = await res.json();
+
+                if (res.ok) {
+                    showAuthSuccess(data.message || 'Account created! You can now sign in.');
+                    setTimeout(() => switchAuthTab('login'), 1500);
+                } else {
+                    showAuthError(data.detail || "Signup failed. Please try again.");
+                }
+            } catch (err) {
+                showAuthError("Cannot connect to server. Please ensure the backend is running.");
+            }
+
+            btn.disabled = false;
+            btn.textContent = 'Create Account 🚀';
+        }
+
+        // Enter key support
+        document.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                if (!document.getElementById('loginForm').classList.contains('hidden')) {
+                    handleLogin();
+                } else {
+                    handleSignup();
+                }
+            }
+        });
+    </script>
+</body>
+</html>

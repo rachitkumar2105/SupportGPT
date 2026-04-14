@@ -1,0 +1,1217 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SupportGPT - Dashboard</title>
+    <meta name="description" content="AI-powered intelligent invoice processing dashboard with automation, analytics, and support">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+</head>
+<body>
+    <div class="bg-glow"></div>
+    <div class="bg-glow-2"></div>
+
+    <!-- Toast Container -->
+    <div class="toast-container" id="toastContainer"></div>
+
+    <!-- Mobile Overlay -->
+    <div class="mobile-overlay" id="mobileOverlay" onclick="toggleSidebar()"></div>
+
+    <!-- Modal Overlay -->
+    <div class="modal-overlay" id="modalOverlay">
+        <div class="modal" id="modalContent"></div>
+    </div>
+
+    <div class="app-container">
+        <!-- ═══ SIDEBAR ═══ -->
+        <nav class="sidebar-nav" id="sidebarNav">
+            <div class="sidebar-brand">
+                <span class="brand-icon">🧾</span>
+                <div>
+                    <div class="brand-text">Intelligent Invoice<br>Processing</div>
+                    <div class="brand-version">v3.0 • AI Powered</div>
+                </div>
+            </div>
+
+            <div class="sidebar-menu">
+                <div class="menu-section">
+                    <div class="menu-section-title">Main</div>
+                    <div class="menu-item active" onclick="navigateTo('chat')" data-page="chat">
+                        <span class="menu-icon">💬</span> AI Chat
+                    </div>
+                    <div class="menu-item" onclick="navigateTo('upload')" data-page="upload">
+                        <span class="menu-icon">📄</span> Upload Docs
+                    </div>
+                    <div class="menu-item" onclick="navigateTo('tickets')" data-page="tickets">
+                        <span class="menu-icon">🎫</span> Tickets
+                        <span class="menu-badge" id="ticketBadge" style="display:none">0</span>
+                    </div>
+                </div>
+
+                <div class="menu-section">
+                    <div class="menu-section-title">Insights</div>
+                    <div class="menu-item" onclick="navigateTo('analytics')" data-page="analytics">
+                        <span class="menu-icon">📊</span> Analytics
+                    </div>
+                    <div class="menu-item" onclick="navigateTo('leaderboard')" data-page="leaderboard">
+                        <span class="menu-icon">🏆</span> Leaderboard
+                    </div>
+                </div>
+
+                <div class="menu-section" id="adminSection" style="display:none">
+                    <div class="menu-section-title">Admin</div>
+                    <div class="menu-item" onclick="navigateTo('admin')" data-page="admin">
+                        <span class="menu-icon">👑</span> Admin Panel
+                    </div>
+                </div>
+
+                <div class="menu-section">
+                    <div class="menu-section-title">Account</div>
+                    <div class="menu-item" onclick="navigateTo('settings')" data-page="settings">
+                        <span class="menu-icon">⚙️</span> Settings
+                    </div>
+                    <div class="menu-item" onclick="handleLogout()" style="color: var(--danger);">
+                        <span class="menu-icon">🚪</span> Logout
+                    </div>
+                </div>
+            </div>
+
+            <div class="sidebar-footer">
+                <div class="user-card">
+                    <div class="user-avatar" id="userAvatar">U</div>
+                    <div class="user-info">
+                        <div class="user-name" id="userName">User</div>
+                        <div class="user-role" id="userRole">customer</div>
+                    </div>
+                    <div class="user-points" id="userPoints">0 ⭐</div>
+                </div>
+            </div>
+        </nav>
+
+        <!-- ═══ MAIN PANEL ═══ -->
+        <div class="main-panel">
+            <div class="top-bar">
+                <div class="top-bar-left">
+                    <button class="mobile-menu-btn" onclick="toggleSidebar()">☰</button>
+                    <h2 class="page-title" id="pageTitle">AI Chat</h2>
+                </div>
+                <div class="top-bar-right">
+                    <button class="btn btn-ghost btn-sm" onclick="navigateTo('chat')" title="New Chat">
+                        💬 Chat
+                    </button>
+                    <button class="btn btn-outline btn-sm" onclick="handleLogout()">Logout</button>
+                </div>
+            </div>
+
+            <div class="content-area" id="contentArea">
+
+                <!-- ═══════════════════════════════════
+                     PAGE: AI CHAT
+                     ═══════════════════════════════════ -->
+                <div class="page-view active" id="page-chat">
+                    <div class="chat-container">
+                        <div class="chat-messages" id="chatMessages">
+                            <div class="msg ai-msg">
+                                <div class="msg-header">🤖 AI Assistant</div>
+                                <div>Welcome to <strong>SupportGPT</strong>! I'm your AI-powered support assistant. I can help you with:
+                                <br><br>
+                                📄 <strong>Document Analysis</strong> — Upload invoices, receipts, or PDFs and ask questions<br>
+                                🎫 <strong>Ticket Management</strong> — Report issues and I'll create tickets automatically<br>
+                                🔍 <strong>Smart Search</strong> — Find answers from your knowledge base<br>
+                                🐛 <strong>Debug Mode</strong> — Paste errors and I'll help diagnose them<br>
+                                🎙️ <strong>Voice Input</strong> — Click the mic button to speak<br>
+                                <br>Upload some documents first, then ask me anything!</div>
+                            </div>
+                        </div>
+
+                        <div class="typing-indicator" id="typingIndicator">
+                            <div class="typing-dots">
+                                <span></span><span></span><span></span>
+                            </div>
+                        </div>
+
+                        <div class="chat-input-area">
+                            <div class="chat-input-wrapper">
+                                <input type="text" id="chatInput" placeholder="Ask about your invoices, report issues, or paste errors..."
+                                       onkeypress="if(event.key === 'Enter') sendMessage()">
+                                <div class="chat-input-actions">
+                                    <button class="input-action-btn btn-voice" id="voiceBtn" onclick="toggleVoice()" title="Voice Input (Web Speech API)">
+                                        🎤
+                                    </button>
+                                    <button class="input-action-btn btn-send-msg" onclick="sendMessage()" title="Send Message">
+                                        ➤
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ═══════════════════════════════════
+                     PAGE: UPLOAD DOCS
+                     ═══════════════════════════════════ -->
+                <div class="page-view" id="page-upload">
+                    <div class="upload-section">
+                        <h2 style="margin-bottom: 8px;">📚 Knowledge Base</h2>
+                        <p class="text-secondary" style="margin-bottom: 24px;">Upload invoices, receipts, manuals, or documents. AI will learn from them automatically.</p>
+
+                        <div class="upload-dropzone" id="dropzone">
+                            <span class="drop-icon">📁</span>
+                            <div class="drop-title">Drop files here or click to browse</div>
+                            <div class="drop-subtitle">AI extracts text, generates summaries, and builds your knowledge base</div>
+                            <div class="file-type-badges">
+                                <span class="file-badge">📄 PDF</span>
+                                <span class="file-badge">🖼️ Images</span>
+                                <span class="file-badge">📝 Text</span>
+                            </div>
+                            <input type="file" id="fileInput" accept=".pdf,.png,.jpg,.jpeg,.gif,.bmp,.webp,.txt,.md,.csv" onchange="handleFileSelect(event)">
+                        </div>
+
+                        <div class="upload-progress" id="uploadProgress">
+                            <div class="progress-bar">
+                                <div class="progress-fill" id="progressFill"></div>
+                            </div>
+                            <p class="text-secondary text-center" id="uploadStatus">Processing...</p>
+                        </div>
+
+                        <div class="upload-result" id="uploadResult"></div>
+
+                        <div class="doc-list" id="docList">
+                            <h3 style="margin-bottom: 16px;">📋 Your Documents</h3>
+                            <div id="docListItems"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ═══════════════════════════════════
+                     PAGE: TICKETS
+                     ═══════════════════════════════════ -->
+                <div class="page-view" id="page-tickets">
+                    <div class="tickets-header">
+                        <div>
+                            <h2 style="margin-bottom: 4px;">🎫 Support Tickets</h2>
+                            <p class="text-secondary">AI automatically creates tickets when issues are detected</p>
+                        </div>
+                        <button class="btn btn-primary" onclick="showNewTicketModal()">+ New Ticket</button>
+                    </div>
+                    <div id="ticketsList"></div>
+                </div>
+
+                <!-- ═══════════════════════════════════
+                     PAGE: ANALYTICS
+                     ═══════════════════════════════════ -->
+                <div class="page-view" id="page-analytics">
+                    <h2 style="margin-bottom: 20px;">📊 Analytics Dashboard</h2>
+                    <div class="stats-grid" id="statsGrid"></div>
+                    <div class="analytics-grid">
+                        <div class="chart-container">
+                            <div class="chart-title">📈 Activity Over Time</div>
+                            <canvas id="activityChart" height="200"></canvas>
+                        </div>
+                        <div class="chart-container">
+                            <div class="chart-title">📊 Action Breakdown</div>
+                            <canvas id="actionChart" height="200"></canvas>
+                        </div>
+                    </div>
+                    <div class="chart-container" id="topQuestionsSection">
+                        <div class="chart-title">🔥 Most Asked Questions</div>
+                        <div id="topQuestionsList"></div>
+                    </div>
+                </div>
+
+                <!-- ═══════════════════════════════════
+                     PAGE: LEADERBOARD
+                     ═══════════════════════════════════ -->
+                <div class="page-view" id="page-leaderboard">
+                    <div style="text-align:center; margin-bottom:24px;">
+                        <h2>🏆 Leaderboard</h2>
+                        <p class="text-secondary">Top contributors earn points through chats, feedback, and uploads</p>
+                    </div>
+                    <div class="leaderboard-list" id="leaderboardList"></div>
+                </div>
+
+                <!-- ═══════════════════════════════════
+                     PAGE: ADMIN
+                     ═══════════════════════════════════ -->
+                <div class="page-view" id="page-admin">
+                    <h2 style="margin-bottom: 20px;">👑 Admin Panel</h2>
+                    <div id="adminUsersList"></div>
+                </div>
+
+                <!-- ═══════════════════════════════════
+                     PAGE: SETTINGS
+                     ═══════════════════════════════════ -->
+                <div class="page-view" id="page-settings">
+                    <div class="settings-section">
+                        <h2 style="margin-bottom: 20px;">⚙️ Settings</h2>
+
+                        <div class="settings-group">
+                            <h3>👤 Profile</h3>
+                            <div class="form-group">
+                                <label>Username</label>
+                                <input type="text" id="settingsUsername" disabled>
+                            </div>
+                            <div class="form-group">
+                                <label>Email</label>
+                                <input type="text" id="settingsEmail" disabled>
+                            </div>
+                            <div class="form-group">
+                                <label>Role</label>
+                                <input type="text" id="settingsRole" disabled>
+                            </div>
+                            <div class="form-group">
+                                <label>Points</label>
+                                <input type="text" id="settingsPoints" disabled>
+                            </div>
+                        </div>
+
+                        <div class="settings-group">
+                            <h3>🗑️ Data Management</h3>
+                            <p class="text-secondary" style="margin-bottom:16px; font-size:13px;">Clear your chat history and start fresh.</p>
+                            <button class="btn btn-danger" onclick="clearHistory()">Clear Chat History</button>
+                        </div>
+
+                        <div class="settings-group">
+                            <h3>ℹ️ About</h3>
+                            <p class="text-secondary" style="font-size:13px;">
+                                <strong>SupportGPT v3.0</strong><br>
+                                AI-Powered Support & Automation System<br><br>
+                                Features: Multi-PDF RAG, Self-Learning AI, AI Agent Mode, Voice Chat, 
+                                Streaming Responses, Analytics Dashboard, Gamification, 
+                                Role-Based AI, Explainable AI, Smart Security
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    <script>
+    // ═══════════════════════════════════════
+    // CONFIGURATION
+    // ═══════════════════════════════════════
+    // [DEPLOYMENT] Update this with your Hugging Face space URL
+    const BACKEND_URL = "https://replace-with-huggingface-url.hf.space";
+    const API = window.location.hostname === '127.0.0.1' || window.location.hostname === 'localhost'
+        ? `http://127.0.0.1:8000`
+        : BACKEND_URL;
+
+    const TOKEN = localStorage.getItem("token");
+    const USERNAME = localStorage.getItem("username");
+    const ROLE = localStorage.getItem("role") || "customer";
+
+    // Auth guard
+    if (!TOKEN) {
+        window.location.href = "login.html";
+    }
+
+    // Chart instances
+    let activityChartInstance = null;
+    let actionChartInstance = null;
+
+    // Voice recognition
+    let recognition = null;
+    let isRecording = false;
+
+    // ═══════════════════════════════════════
+    // INITIALIZATION
+    // ═══════════════════════════════════════
+    document.addEventListener("DOMContentLoaded", () => {
+        initializeUI();
+        loadChatHistory();
+        loadDocuments();
+    });
+
+    function initializeUI() {
+        // Set user info
+        document.getElementById("userName").textContent = USERNAME || "User";
+        document.getElementById("userRole").textContent = ROLE;
+        document.getElementById("userAvatar").textContent = (USERNAME || "U")[0].toUpperCase();
+        document.getElementById("userPoints").textContent = (localStorage.getItem("points") || "0") + " ⭐";
+
+        // Show admin section if admin
+        if (ROLE === "admin") {
+            document.getElementById("adminSection").style.display = "block";
+        }
+
+        // Settings
+        document.getElementById("settingsUsername").value = USERNAME || "";
+        document.getElementById("settingsEmail").value = localStorage.getItem("email") || "Not set";
+        document.getElementById("settingsRole").value = ROLE;
+        document.getElementById("settingsPoints").value = localStorage.getItem("points") || "0";
+
+        // Initialize voice recognition
+        initVoiceRecognition();
+    }
+
+    // ═══════════════════════════════════════
+    // NAVIGATION
+    // ═══════════════════════════════════════
+    function navigateTo(page) {
+        // Hide all pages
+        document.querySelectorAll('.page-view').forEach(p => p.classList.remove('active'));
+        document.querySelectorAll('.menu-item').forEach(m => m.classList.remove('active'));
+
+        // Show target page
+        const target = document.getElementById(`page-${page}`);
+        if (target) target.classList.add('active');
+
+        // Set active menu
+        const menuItem = document.querySelector(`[data-page="${page}"]`);
+        if (menuItem) menuItem.classList.add('active');
+
+        // Page titles
+        const titles = {
+            chat: 'AI Chat', upload: 'Upload Documents', tickets: 'Support Tickets',
+            analytics: 'Analytics Dashboard', leaderboard: 'Leaderboard',
+            admin: 'Admin Panel', settings: 'Settings'
+        };
+        document.getElementById('pageTitle').textContent = titles[page] || page;
+
+        // Load data for each page
+        if (page === 'tickets') loadTickets();
+        if (page === 'analytics') loadAnalytics();
+        if (page === 'leaderboard') loadLeaderboard();
+        if (page === 'admin') loadAdminUsers();
+        if (page === 'upload') loadDocuments();
+
+        // Close mobile sidebar
+        closeSidebar();
+    }
+
+    function toggleSidebar() {
+        document.getElementById('sidebarNav').classList.toggle('open');
+        document.getElementById('mobileOverlay').classList.toggle('active');
+    }
+
+    function closeSidebar() {
+        document.getElementById('sidebarNav').classList.remove('open');
+        document.getElementById('mobileOverlay').classList.remove('active');
+    }
+
+    // ═══════════════════════════════════════
+    // TOAST NOTIFICATIONS
+    // ═══════════════════════════════════════
+    function showToast(title, message, type = 'info') {
+        const container = document.getElementById('toastContainer');
+        const icons = { success: '✅', error: '❌', info: 'ℹ️', warning: '⚠️' };
+        const toast = document.createElement('div');
+        toast.className = `toast toast-${type}`;
+        toast.innerHTML = `
+            <span class="toast-icon">${icons[type]}</span>
+            <div class="toast-body">
+                <div class="toast-title">${title}</div>
+                <div class="toast-message">${message}</div>
+            </div>
+        `;
+        container.appendChild(toast);
+        setTimeout(() => {
+            toast.style.opacity = '0';
+            toast.style.transform = 'translateX(100px)';
+            setTimeout(() => toast.remove(), 300);
+        }, 4000);
+    }
+
+    // ═══════════════════════════════════════
+    // API HELPER
+    // ═══════════════════════════════════════
+    async function apiRequest(endpoint, method = 'GET', body = null) {
+        const options = {
+            method,
+            headers: {
+                'Authorization': `Bearer ${TOKEN}`,
+                'Content-Type': 'application/json'
+            }
+        };
+        if (body) options.body = JSON.stringify(body);
+
+        const res = await fetch(API + endpoint, options);
+
+        if (res.status === 401) {
+            showToast('Session Expired', 'Please log in again.', 'error');
+            setTimeout(() => {
+                localStorage.clear();
+                window.location.href = 'login.html';
+            }, 1500);
+            throw new Error('Unauthorized');
+        }
+
+        return { res, data: await res.json() };
+    }
+
+    // ═══════════════════════════════════════
+    // CHAT FUNCTIONALITY
+    // ═══════════════════════════════════════
+    async function loadChatHistory() {
+        try {
+            const { data } = await apiRequest('/history');
+            if (data && data.length > 0) {
+                const chatBox = document.getElementById('chatMessages');
+                // Keep the welcome message
+                data.forEach(entry => {
+                    addMessage(entry.content, entry.role === 'user' ? 'user' : 'ai', false);
+                });
+                chatBox.scrollTop = chatBox.scrollHeight;
+            }
+        } catch (e) {
+            // Silent fail - history loading is non-critical
+        }
+    }
+
+    function addMessage(content, type, animate = true) {
+        const chatBox = document.getElementById('chatMessages');
+        const div = document.createElement('div');
+        div.className = `msg ${type === 'user' ? 'user-msg' : 'ai-msg'}`;
+        if (!animate) div.style.animation = 'none';
+
+        if (type === 'user') {
+            div.innerHTML = `
+                <div class="msg-header">👤 You</div>
+                <div>${escapeHtml(content)}</div>
+            `;
+        } else {
+            const formattedContent = formatAIResponse(content);
+            div.innerHTML = `
+                <div class="msg-header">🤖 AI Assistant</div>
+                <div>${formattedContent}</div>
+                <div class="msg-actions">
+                    <button class="msg-action-btn" onclick="giveFeedback(this, true, '${escapeAttr(content.substring(0, 100))}')" title="Helpful">👍</button>
+                    <button class="msg-action-btn" onclick="giveFeedback(this, false, '${escapeAttr(content.substring(0, 100))}')" title="Not helpful">👎</button>
+                    <button class="msg-action-btn" onclick="copyText(this)" title="Copy">📋</button>
+                </div>
+            `;
+        }
+
+        chatBox.appendChild(div);
+        chatBox.scrollTop = chatBox.scrollHeight;
+        return div;
+    }
+
+    function formatAIResponse(text) {
+        // Convert markdown-like formatting
+        let html = escapeHtml(text);
+        // Bold
+        html = html.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+        // Code blocks
+        html = html.replace(/```([\s\S]*?)```/g, '<pre><code>$1</code></pre>');
+        // Inline code
+        html = html.replace(/`([^`]+)`/g, '<code>$1</code>');
+        // Line breaks
+        html = html.replace(/\n/g, '<br>');
+        return html;
+    }
+
+    function escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
+
+    function escapeAttr(text) {
+        return text.replace(/'/g, "\\'").replace(/"/g, '\\"').replace(/\n/g, ' ');
+    }
+
+    async function sendMessage() {
+        const input = document.getElementById('chatInput');
+        const text = input.value.trim();
+        if (!text) return;
+
+        addMessage(text, 'user');
+        input.value = '';
+
+        // Show typing indicator
+        document.getElementById('typingIndicator').style.display = 'block';
+        const chatBox = document.getElementById('chatMessages');
+        chatBox.scrollTop = chatBox.scrollHeight;
+
+        try {
+            // Try streaming first
+            const streamSuccess = await streamMessage(text);
+            if (!streamSuccess) {
+                // Fallback to regular chat
+                const { res, data } = await apiRequest('/chat', 'POST', { message: text });
+                document.getElementById('typingIndicator').style.display = 'none';
+
+                if (data.response) {
+                    addMessage(data.response, 'ai');
+                    // Update points
+                    if (data.points) {
+                        localStorage.setItem('points', data.points);
+                        document.getElementById('userPoints').textContent = data.points + ' ⭐';
+                    }
+                }
+            }
+        } catch (err) {
+            document.getElementById('typingIndicator').style.display = 'none';
+            addMessage('⚠️ Failed to get response. Please try again.', 'ai');
+        }
+    }
+
+    async function streamMessage(text) {
+        try {
+            const res = await fetch(API + '/chat/stream', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${TOKEN}`
+                },
+                body: JSON.stringify({ message: text })
+            });
+
+            if (!res.ok) return false;
+
+            document.getElementById('typingIndicator').style.display = 'none';
+
+            const chatBox = document.getElementById('chatMessages');
+            const msgDiv = document.createElement('div');
+            msgDiv.className = 'msg ai-msg';
+            msgDiv.innerHTML = `
+                <div class="msg-header">🤖 AI Assistant</div>
+                <div class="streaming-text" id="streamingContent"></div>
+            `;
+            chatBox.appendChild(msgDiv);
+
+            const reader = res.body.getReader();
+            const decoder = new TextDecoder();
+            let fullText = '';
+
+            while (true) {
+                const { done, value } = await reader.read();
+                if (done) break;
+
+                const chunk = decoder.decode(value);
+                const lines = chunk.split('\n');
+
+                for (const line of lines) {
+                    if (line.startsWith('data: ')) {
+                        try {
+                            const parsed = JSON.parse(line.substring(6));
+                            if (parsed.token) {
+                                fullText += parsed.token;
+                                document.getElementById('streamingContent').innerHTML = formatAIResponse(fullText);
+                                chatBox.scrollTop = chatBox.scrollHeight;
+                            }
+                            if (parsed.done) {
+                                // Remove streaming cursor
+                                const sc = document.getElementById('streamingContent');
+                                if (sc) sc.classList.remove('streaming-text');
+                                // Add feedback buttons
+                                const actions = document.createElement('div');
+                                actions.className = 'msg-actions';
+                                actions.innerHTML = `
+                                    <button class="msg-action-btn" onclick="giveFeedback(this, true, '')" title="Helpful">👍</button>
+                                    <button class="msg-action-btn" onclick="giveFeedback(this, false, '')" title="Not helpful">👎</button>
+                                    <button class="msg-action-btn" onclick="copyText(this)" title="Copy">📋</button>
+                                `;
+                                msgDiv.appendChild(actions);
+                            }
+                            if (parsed.error) {
+                                return false;
+                            }
+                        } catch (e) { /* skip invalid JSON */ }
+                    }
+                }
+            }
+            return true;
+        } catch (e) {
+            return false;
+        }
+    }
+
+    // ═══════════════════════════════════════
+    // VOICE RECOGNITION
+    // ═══════════════════════════════════════
+    function initVoiceRecognition() {
+        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+        if (SpeechRecognition) {
+            recognition = new SpeechRecognition();
+            recognition.continuous = false;
+            recognition.interimResults = true;
+            recognition.lang = 'en-US';
+
+            recognition.onresult = (event) => {
+                let transcript = '';
+                for (let i = 0; i < event.results.length; i++) {
+                    transcript += event.results[i][0].transcript;
+                }
+                document.getElementById('chatInput').value = transcript;
+            };
+
+            recognition.onend = () => {
+                isRecording = false;
+                document.getElementById('voiceBtn').classList.remove('recording');
+                document.getElementById('voiceBtn').textContent = '🎤';
+                // Auto-send if we got text
+                const input = document.getElementById('chatInput');
+                if (input.value.trim()) {
+                    sendMessage();
+                }
+            };
+
+            recognition.onerror = (event) => {
+                isRecording = false;
+                document.getElementById('voiceBtn').classList.remove('recording');
+                document.getElementById('voiceBtn').textContent = '🎤';
+                if (event.error !== 'no-speech') {
+                    showToast('Voice Error', 'Speech recognition failed: ' + event.error, 'error');
+                }
+            };
+        } else {
+            document.getElementById('voiceBtn').style.display = 'none';
+        }
+    }
+
+    function toggleVoice() {
+        if (!recognition) {
+            showToast('Not Supported', 'Voice recognition is not supported in this browser.', 'warning');
+            return;
+        }
+
+        if (isRecording) {
+            recognition.stop();
+            isRecording = false;
+        } else {
+            recognition.start();
+            isRecording = true;
+            document.getElementById('voiceBtn').classList.add('recording');
+            document.getElementById('voiceBtn').textContent = '⏹';
+            showToast('Listening...', 'Speak now. Click stop when done.', 'info');
+        }
+    }
+
+    // ═══════════════════════════════════════
+    // FEEDBACK
+    // ═══════════════════════════════════════
+    async function giveFeedback(btn, isPositive, responseSnippet) {
+        const parent = btn.closest('.msg-actions');
+        const allBtns = parent.querySelectorAll('.msg-action-btn');
+
+        try {
+            await apiRequest('/feedback', 'POST', {
+                query: '',
+                response: responseSnippet,
+                is_positive: isPositive
+            });
+
+            if (isPositive) {
+                allBtns[0].classList.add('liked');
+                allBtns[1].classList.remove('disliked');
+            } else {
+                allBtns[1].classList.add('disliked');
+                allBtns[0].classList.remove('liked');
+            }
+
+            showToast('Thank you!', 'Your feedback helps AI improve. +2 points!', 'success');
+        } catch (e) {
+            showToast('Error', 'Failed to submit feedback', 'error');
+        }
+    }
+
+    function copyText(btn) {
+        const msgContent = btn.closest('.msg').querySelector('div:nth-child(2)');
+        navigator.clipboard.writeText(msgContent.textContent);
+        showToast('Copied!', 'Response copied to clipboard', 'success');
+    }
+
+    // ═══════════════════════════════════════
+    // FILE UPLOAD
+    // ═══════════════════════════════════════
+    function handleFileSelect(event) {
+        const file = event.target.files[0];
+        if (!file) return;
+        uploadFile(file);
+    }
+
+    // Drag & drop
+    const dropzone = document.getElementById('dropzone');
+    if (dropzone) {
+        dropzone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            dropzone.classList.add('dragover');
+        });
+        dropzone.addEventListener('dragleave', () => dropzone.classList.remove('dragover'));
+        dropzone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            dropzone.classList.remove('dragover');
+            if (e.dataTransfer.files.length) uploadFile(e.dataTransfer.files[0]);
+        });
+    }
+
+    async function uploadFile(file) {
+        const progressDiv = document.getElementById('uploadProgress');
+        const progressFill = document.getElementById('progressFill');
+        const statusText = document.getElementById('uploadStatus');
+        const resultDiv = document.getElementById('uploadResult');
+
+        progressDiv.style.display = 'block';
+        resultDiv.style.display = 'none';
+
+        // Animate progress
+        let progress = 0;
+        const progressInterval = setInterval(() => {
+            progress = Math.min(progress + Math.random() * 15, 90);
+            progressFill.style.width = progress + '%';
+        }, 300);
+
+        statusText.textContent = `Processing ${file.name}...`;
+
+        try {
+            const form = new FormData();
+            form.append('file', file);
+
+            const res = await fetch(API + '/upload', {
+                method: 'POST',
+                headers: { 'Authorization': `Bearer ${TOKEN}` },
+                body: form
+            });
+
+            clearInterval(progressInterval);
+            progressFill.style.width = '100%';
+
+            const data = await res.json();
+
+            if (res.ok) {
+                statusText.textContent = 'Upload complete!';
+                resultDiv.style.display = 'block';
+                resultDiv.innerHTML = `
+                    <div class="glass-panel" style="padding: 20px;">
+                        <h4 style="margin-bottom: 12px; color: var(--success);">✅ ${data.message}</h4>
+                        <p class="text-secondary" style="font-size: 13px; margin-bottom: 8px;">
+                            📊 Type: ${data.file_type} | Characters: ${data.characters_extracted?.toLocaleString() || 0}
+                            ${data.pages ? ` | Pages: ${data.pages}` : ''}
+                            | Points: +${data.points_earned}
+                        </p>
+                        ${data.summary ? `<div style="margin-top: 12px; padding: 12px; background: rgba(0,0,0,0.2); border-radius: 8px; font-size: 13px;">
+                            <strong>📝 AI Summary:</strong><br>${data.summary.replace(/\n/g, '<br>')}
+                        </div>` : ''}
+                    </div>
+                `;
+
+                showToast('Upload Successful', `${file.name} processed!`, 'success');
+                loadDocuments();
+
+                // Update points
+                const pts = parseInt(localStorage.getItem('points') || '0') + (data.points_earned || 5);
+                localStorage.setItem('points', pts);
+                document.getElementById('userPoints').textContent = pts + ' ⭐';
+            } else {
+                statusText.textContent = 'Upload failed';
+                showToast('Upload Failed', data.detail || 'Error processing file', 'error');
+            }
+        } catch (err) {
+            clearInterval(progressInterval);
+            statusText.textContent = 'Upload failed';
+            showToast('Upload Error', 'Could not connect to server', 'error');
+        }
+
+        // Reset after delay
+        setTimeout(() => {
+            progressDiv.style.display = 'none';
+            progressFill.style.width = '0%';
+            document.getElementById('fileInput').value = '';
+        }, 3000);
+    }
+
+    async function loadDocuments() {
+        try {
+            const { data } = await apiRequest('/documents');
+            const container = document.getElementById('docListItems');
+            if (!data || data.length === 0) {
+                container.innerHTML = '<div class="empty-state"><span class="empty-icon">📭</span><div class="empty-title">No documents yet</div><div class="empty-desc">Upload your first document to build your AI knowledge base</div></div>';
+                return;
+            }
+
+            container.innerHTML = data.map(doc => `
+                <div class="doc-item">
+                    <span class="doc-icon">${doc.file_type === 'pdf' ? '📄' : doc.file_type === 'image' ? '🖼️' : '📝'}</span>
+                    <div class="doc-details">
+                        <div class="doc-name">${doc.filename}</div>
+                        <div class="doc-meta">${doc.file_type.toUpperCase()} ${doc.pages ? `• ${doc.pages} pages` : ''} • ${new Date(doc.uploaded_at).toLocaleDateString()}</div>
+                    </div>
+                </div>
+            `).join('');
+        } catch (e) {
+            // Silent fail
+        }
+    }
+
+    // ═══════════════════════════════════════
+    // TICKETS
+    // ═══════════════════════════════════════
+    async function loadTickets() {
+        try {
+            const { data } = await apiRequest('/tickets');
+            const container = document.getElementById('ticketsList');
+
+            if (!data || data.length === 0) {
+                container.innerHTML = '<div class="empty-state"><span class="empty-icon">🎫</span><div class="empty-title">No tickets yet</div><div class="empty-desc">Tickets are created automatically when you report issues in chat, or you can create one manually.</div></div>';
+                return;
+            }
+
+            container.innerHTML = data.map(t => {
+                const statusClass = t.status === 'Open' ? 'badge-open' : t.status === 'Resolved' ? 'badge-resolved' : 'badge-progress';
+                const prioClass = t.priority === 'High' ? 'badge-high' : t.priority === 'Critical' ? 'badge-critical' : t.priority === 'Low' ? 'badge-low' : 'badge-medium';
+                return `
+                    <div class="ticket-card">
+                        <div class="ticket-top">
+                            <span class="ticket-id">#${t.id}</span>
+                            <span class="badge ${statusClass}">${t.status}</span>
+                        </div>
+                        <div class="ticket-issue">${escapeHtml(t.issue)}</div>
+                        <div class="ticket-footer">
+                            <span class="badge ${prioClass}">${t.priority}</span>
+                            <span class="text-muted" style="font-size:12px;">by ${t.username} • ${new Date(t.created_at).toLocaleDateString()}</span>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+
+            // Update badge
+            const openCount = data.filter(t => t.status === 'Open').length;
+            const badge = document.getElementById('ticketBadge');
+            if (openCount > 0) {
+                badge.style.display = 'flex';
+                badge.textContent = openCount;
+            } else {
+                badge.style.display = 'none';
+            }
+        } catch (e) {
+            showToast('Error', 'Failed to load tickets', 'error');
+        }
+    }
+
+    function showNewTicketModal() {
+        const modal = document.getElementById('modalContent');
+        modal.innerHTML = `
+            <div class="modal-header">
+                <h3>🎫 New Support Ticket</h3>
+                <button class="modal-close" onclick="closeModal()">✕</button>
+            </div>
+            <div class="form-group">
+                <label>Issue Description</label>
+                <textarea id="ticketIssue" rows="4" placeholder="Describe your issue in detail..."></textarea>
+            </div>
+            <div class="form-group">
+                <label>Priority</label>
+                <select id="ticketPriority">
+                    <option value="Low">Low</option>
+                    <option value="Medium" selected>Medium</option>
+                    <option value="High">High</option>
+                    <option value="Critical">Critical</option>
+                </select>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-outline" onclick="closeModal()">Cancel</button>
+                <button class="btn btn-primary" onclick="submitTicket()">Create Ticket</button>
+            </div>
+        `;
+        document.getElementById('modalOverlay').classList.add('active');
+    }
+
+    async function submitTicket() {
+        const issue = document.getElementById('ticketIssue').value.trim();
+        const priority = document.getElementById('ticketPriority').value;
+
+        if (!issue) {
+            showToast('Error', 'Please describe the issue', 'error');
+            return;
+        }
+
+        try {
+            const { data } = await apiRequest('/tickets', 'POST', { issue, priority });
+            showToast('Ticket Created', data.message, 'success');
+            closeModal();
+            loadTickets();
+        } catch (e) {
+            showToast('Error', 'Failed to create ticket', 'error');
+        }
+    }
+
+    function closeModal() {
+        document.getElementById('modalOverlay').classList.remove('active');
+    }
+
+    // ═══════════════════════════════════════
+    // ANALYTICS
+    // ═══════════════════════════════════════
+    async function loadAnalytics() {
+        const statsGrid = document.getElementById('statsGrid');
+
+        try {
+            let analyticsData;
+
+            if (ROLE === 'admin') {
+                const { data } = await apiRequest('/analytics');
+                analyticsData = data;
+
+                statsGrid.innerHTML = `
+                    <div class="stat-card">
+                        <div class="stat-icon">👥</div>
+                        <div class="stat-value">${data.total_users}</div>
+                        <div class="stat-label">Total Users</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon">💬</div>
+                        <div class="stat-value">${data.total_chats}</div>
+                        <div class="stat-label">Total Chats</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon">📄</div>
+                        <div class="stat-value">${data.total_uploads}</div>
+                        <div class="stat-label">Documents</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon">🎫</div>
+                        <div class="stat-value">${data.open_tickets}/${data.total_tickets}</div>
+                        <div class="stat-label">Open/Total Tickets</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon">🎯</div>
+                        <div class="stat-value">${data.ai_accuracy}%</div>
+                        <div class="stat-label">AI Accuracy</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon">⚡</div>
+                        <div class="stat-value">${data.avg_response_time_ms}ms</div>
+                        <div class="stat-label">Avg Response Time</div>
+                    </div>
+                `;
+
+                // Activity chart
+                renderActivityChart(data.daily_activity || []);
+                // Action breakdown chart
+                renderActionChart(data.action_breakdown || {});
+
+                // Top questions
+                const tqList = document.getElementById('topQuestionsList');
+                if (data.top_questions && data.top_questions.length > 0) {
+                    tqList.innerHTML = data.top_questions.map((q, i) => `
+                        <div style="display:flex; align-items:center; gap:12px; padding:10px 0; border-bottom:1px solid var(--border-glass);">
+                            <span style="font-weight:600; color:var(--text-muted); min-width:24px;">${i + 1}</span>
+                            <span style="flex:1; font-size:13px;">${escapeHtml(q.question)}</span>
+                            <span class="badge badge-open">${q.times_used}x</span>
+                            <span class="text-muted" style="font-size:12px;">${Math.round(q.confidence * 100)}%</span>
+                        </div>
+                    `).join('');
+                } else {
+                    tqList.innerHTML = '<p class="text-muted" style="padding:20px 0;">No questions recorded yet. Start chatting!</p>';
+                }
+
+            } else {
+                // Non-admin: show limited analytics
+                const { data } = await apiRequest('/analytics/public');
+
+                statsGrid.innerHTML = `
+                    <div class="stat-card">
+                        <div class="stat-icon">💬</div>
+                        <div class="stat-value">${data.my_total_chats}</div>
+                        <div class="stat-label">My Chats</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon">🌐</div>
+                        <div class="stat-value">${data.total_platform_chats}</div>
+                        <div class="stat-label">Platform Chats</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon">⭐</div>
+                        <div class="stat-value">${data.my_points}</div>
+                        <div class="stat-label">My Points</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon">🎭</div>
+                        <div class="stat-value text-gradient">${data.my_role}</div>
+                        <div class="stat-label">My Role</div>
+                    </div>
+                `;
+
+                document.getElementById('topQuestionsSection').style.display = 'none';
+            }
+        } catch (e) {
+            statsGrid.innerHTML = '<p class="text-muted">Failed to load analytics data.</p>';
+        }
+    }
+
+    function renderActivityChart(dailyData) {
+        const ctx = document.getElementById('activityChart');
+        if (!ctx) return;
+
+        if (activityChartInstance) activityChartInstance.destroy();
+
+        activityChartInstance = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: dailyData.map(d => d.date),
+                datasets: [{
+                    label: 'Activity',
+                    data: dailyData.map(d => d.count),
+                    borderColor: '#6366f1',
+                    backgroundColor: 'rgba(99, 102, 241, 0.1)',
+                    fill: true,
+                    tension: 0.4,
+                    pointBackgroundColor: '#6366f1',
+                    pointRadius: 4,
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { display: false } },
+                scales: {
+                    x: {
+                        grid: { color: 'rgba(255,255,255,0.05)' },
+                        ticks: { color: '#64748b', font: { size: 11 } }
+                    },
+                    y: {
+                        grid: { color: 'rgba(255,255,255,0.05)' },
+                        ticks: { color: '#64748b', font: { size: 11 } },
+                        beginAtZero: true
+                    }
+                }
+            }
+        });
+    }
+
+    function renderActionChart(breakdown) {
+        const ctx = document.getElementById('actionChart');
+        if (!ctx) return;
+
+        if (actionChartInstance) actionChartInstance.destroy();
+
+        const labels = Object.keys(breakdown);
+        const values = Object.values(breakdown);
+        const colors = ['#6366f1', '#8b5cf6', '#06b6d4', '#10b981', '#f59e0b', '#ef4444', '#ec4899'];
+
+        actionChartInstance = new Chart(ctx, {
+            type: 'doughnut',
+            data: {
+                labels: labels.map(l => l.charAt(0).toUpperCase() + l.slice(1)),
+                datasets: [{
+                    data: values,
+                    backgroundColor: colors.slice(0, labels.length),
+                    borderWidth: 0,
+                    hoverOffset: 4
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'bottom',
+                        labels: { color: '#94a3b8', font: { size: 11 }, padding: 12 }
+                    }
+                },
+                cutout: '65%'
+            }
+        });
+    }
+
+    // ═══════════════════════════════════════
+    // LEADERBOARD
+    // ═══════════════════════════════════════
+    async function loadLeaderboard() {
+        try {
+            const { data } = await apiRequest('/leaderboard');
+            const container = document.getElementById('leaderboardList');
+
+            if (!data || data.length === 0) {
+                container.innerHTML = '<div class="empty-state"><span class="empty-icon">🏆</span><div class="empty-title">No users yet</div></div>';
+                return;
+            }
+
+            const medals = ['🥇', '🥈', '🥉'];
+
+            container.innerHTML = data.map(u => `
+                <div class="leaderboard-item ${u.username === USERNAME ? 'style="border-color: var(--primary);"' : ''}">
+                    <div class="rank-badge">${u.rank <= 3 ? medals[u.rank - 1] : u.rank}</div>
+                    <div class="lb-user">
+                        <div class="lb-name">${u.username} ${u.username === USERNAME ? '(You)' : ''}</div>
+                        <div class="lb-role">${u.role}</div>
+                    </div>
+                    <div class="lb-points">${u.points} ⭐</div>
+                </div>
+            `).join('');
+        } catch (e) {
+            showToast('Error', 'Failed to load leaderboard', 'error');
+        }
+    }
+
+    // ═══════════════════════════════════════
+    // ADMIN
+    // ═══════════════════════════════════════
+    async function loadAdminUsers() {
+        if (ROLE !== 'admin') return;
+
+        try {
+            const { data } = await apiRequest('/admin/users');
+            const container = document.getElementById('adminUsersList');
+
+            container.innerHTML = data.map(u => `
+                <div class="admin-user-item">
+                    <div class="user-avatar">${u.username[0].toUpperCase()}</div>
+                    <div style="flex:1;">
+                        <div style="font-weight:600; font-size:14px;">${u.username}</div>
+                        <div class="text-muted" style="font-size:12px;">${u.email || 'No email'} • Joined ${new Date(u.created_at).toLocaleDateString()}</div>
+                    </div>
+                    <select onchange="updateUserRole(${u.id}, this.value)" style="width:auto; padding:6px 12px; font-size:12px;">
+                        <option value="customer" ${u.role === 'customer' ? 'selected' : ''}>Customer</option>
+                        <option value="developer" ${u.role === 'developer' ? 'selected' : ''}>Developer</option>
+                        <option value="admin" ${u.role === 'admin' ? 'selected' : ''}>Admin</option>
+                    </select>
+                    <span class="user-points">${u.points} ⭐</span>
+                </div>
+            `).join('');
+        } catch (e) {
+            showToast('Error', 'Failed to load users', 'error');
+        }
+    }
+
+    async function updateUserRole(userId, role) {
+        try {
+            await apiRequest(`/admin/users/${userId}/role`, 'PUT', { role });
+            showToast('Updated', `User role changed to ${role}`, 'success');
+        } catch (e) {
+            showToast('Error', 'Failed to update role', 'error');
+        }
+    }
+
+    // ═══════════════════════════════════════
+    // SETTINGS / MISC
+    // ═══════════════════════════════════════
+    async function clearHistory() {
+        if (!confirm('Are you sure you want to clear all chat history?')) return;
+        try {
+            await apiRequest('/history', 'DELETE');
+            document.getElementById('chatMessages').innerHTML = `
+                <div class="msg ai-msg">
+                    <div class="msg-header">🤖 AI Assistant</div>
+                    <div>Chat history cleared. How can I help you today?</div>
+                </div>
+            `;
+            showToast('Cleared', 'Chat history has been cleared', 'success');
+        } catch (e) {
+            showToast('Error', 'Failed to clear history', 'error');
+        }
+    }
+
+    function handleLogout() {
+        localStorage.clear();
+        window.location.href = 'login.html';
+    }
+
+    // Close modal on overlay click
+    document.getElementById('modalOverlay').addEventListener('click', (e) => {
+        if (e.target === document.getElementById('modalOverlay')) closeModal();
+    });
+
+    // Escape key to close modal
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') closeModal();
+    });
+    </script>
+</body>
+</html>

@@ -1,0 +1,6 @@
+.env
+app.db
+__pycache__/
+docs/
+uploads/
+*.pdf
