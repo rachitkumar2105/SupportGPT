@@ -6,6 +6,10 @@
   "framework": null,
   "rewrites": [
     {
+      "source": "/",
+      "destination": "/login.html"
+    },
+    {
       "source": "/api/(.*)",
       "destination": "https://rachitkumar2105-supportgpt-backend.hf.space/$1"
     }
