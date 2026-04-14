@@ -46,8 +46,9 @@ body {
     background: var(--bg-main);
     color: var(--text-primary);
     font-family: var(--font-stack);
+    height: 100dvh;
     min-height: 100vh;
-    overflow-x: hidden;
+    overflow: hidden;
     line-height: 1.6;
 }
 
@@ -373,7 +374,7 @@ input::placeholder, textarea::placeholder {
    ═══════════════════════════════════════ */
 .app-container {
     display: flex;
-    height: 100vh;
+    height: 100%;
     overflow: hidden;
 }
 
@@ -534,6 +535,7 @@ input::placeholder, textarea::placeholder {
     flex-direction: column;
     overflow: hidden;
     position: relative;
+    min-height: 0;
 }
 
 .top-bar {

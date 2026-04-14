@@ -669,7 +669,7 @@ def submit_feedback(data: dict, current_user: User = Depends(get_current_user), 
 
 @app.get("/tickets")
 def get_tickets(current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
-    if current_user.role == "admin":
+    if current_user.role in ["admin", "developer"]:
         tickets = db.query(Ticket).order_by(desc(Ticket.created_at)).all()
     else:
         tickets = db.query(Ticket).filter(
@@ -682,7 +682,9 @@ def get_tickets(current_user: User = Depends(get_current_user), db: Session = De
         "priority": t.priority,
         "username": t.username,
         "created_at": str(t.created_at),
-        "ai_response": t.ai_response
+        "ai_response": t.ai_response,
+        "developer": getattr(t, "developer_username", None),
+        "resolved_at": str(t.resolved_at) if getattr(t, "resolved_at", None) else None
     } for t in tickets]
 
 
@@ -719,6 +721,9 @@ def update_ticket(ticket_id: int, data: dict, current_user: User = Depends(get_c
 
     if "status" in data:
         ticket.status = data["status"]
+        if ticket.status == "Resolved" and current_user.role in ["admin", "developer"]:
+            ticket.developer_username = current_user.username
+            ticket.resolved_at = datetime.datetime.utcnow()
     if "priority" in data:
         ticket.priority = data["priority"]
     if "ai_response" in data:

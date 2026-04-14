@@ -208,8 +208,15 @@
                             <h2 style="margin-bottom: 4px;">🎫 Support Tickets</h2>
                             <p class="text-secondary">AI automatically creates tickets when issues are detected</p>
                         </div>
-                        <button class="btn btn-primary" onclick="showNewTicketModal()">+ New Ticket</button>
+                        <button class="btn btn-primary" id="btnNewTicket" onclick="showNewTicketModal()">+ New Ticket</button>
                     </div>
+                    
+                    <div id="adminTicketStats" class="analytics-grid" style="display:none; margin-bottom: 24px;">
+                        <div class="stat-card"><div class="stat-icon">📝</div><div class="stat-value" id="tsTotal">0</div><div class="stat-label">Total Raised</div></div>
+                        <div class="stat-card"><div class="stat-icon">⏳</div><div class="stat-value" id="tsPending">0</div><div class="stat-label">Yet To Solve</div></div>
+                        <div class="stat-card"><div class="stat-icon">✅</div><div class="stat-value" id="tsSolved">0</div><div class="stat-label">Solved</div></div>
+                    </div>
+
                     <div id="ticketsList"></div>
                 </div>
 
@@ -900,6 +907,23 @@
             container.innerHTML = data.map(t => {
                 const statusClass = t.status === 'Open' ? 'badge-open' : t.status === 'Resolved' ? 'badge-resolved' : 'badge-progress';
                 const prioClass = t.priority === 'High' ? 'badge-high' : t.priority === 'Critical' ? 'badge-critical' : t.priority === 'Low' ? 'badge-low' : 'badge-medium';
+                
+                let devInfo = '';
+                if(t.status === 'Resolved' && t.developer) {
+                    devInfo = `<div style="font-size:12px; color:var(--success); margin-top:6px;">🛠️ Solved by Dev: <strong>${t.developer}</strong> at ${new Date(t.resolved_at).toLocaleString()}</div>`;
+                }
+
+                let controls = '';
+                if(ROLE === 'developer' && t.status !== 'Resolved') {
+                    controls = `
+                        <select onchange="updateTicketStatus(${t.id}, this.value)" style="margin-top:10px; font-size:12px; padding:4px 8px;">
+                            <option value="Open" ${t.status==='Open'?'selected':''}>Open</option>
+                            <option value="In Progress" ${t.status==='In Progress'?'selected':''}>In Progress</option>
+                            <option value="Resolved">Mark as Resolved</option>
+                        </select>
+                    `;
+                }
+
                 return `
                     <div class="ticket-card">
                         <div class="ticket-top">
@@ -909,11 +933,26 @@
                         <div class="ticket-issue">${escapeHtml(t.issue)}</div>
                         <div class="ticket-footer">
                             <span class="badge ${prioClass}">${t.priority}</span>
-                            <span class="text-muted" style="font-size:12px;">by ${t.username} • ${new Date(t.created_at).toLocaleDateString()}</span>
+                            <span class="text-muted" style="font-size:12px;">by <strong>${t.username}</strong> • ${new Date(t.created_at).toLocaleString()}</span>
                         </div>
+                        ${devInfo}
+                        ${controls}
                     </div>
                 `;
             }).join('');
+
+            if(ROLE === 'admin') {
+                document.getElementById('adminTicketStats').style.display = 'grid';
+                document.getElementById('btnNewTicket').style.display = 'none';
+                const total = data.length;
+                const solved = data.filter(d => d.status === 'Resolved').length;
+                const pending = total - solved;
+                document.getElementById('tsTotal').innerText = total;
+                document.getElementById('tsSolved').innerText = solved;
+                document.getElementById('tsPending').innerText = pending;
+            } else if (ROLE === 'developer') {
+                document.getElementById('btnNewTicket').style.display = 'none';
+            }
 
             // Update badge
             const openCount = data.filter(t => t.status === 'Open').length;
@@ -973,6 +1012,16 @@
             loadTickets();
         } catch (e) {
             showToast('Error', 'Failed to create ticket', 'error');
+        }
+    }
+
+    async function updateTicketStatus(tid, status) {
+        try {
+            await apiRequest('/tickets/' + tid, 'PUT', { status });
+            showToast('Success', 'Ticket status updated', 'success');
+            loadTickets();
+        } catch(e) {
+            showToast('Error', 'Failed to update ticket', 'error');
         }
     }
 
