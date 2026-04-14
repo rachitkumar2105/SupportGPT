@@ -61,8 +61,6 @@ def seed_admin():
     finally:
         db.close()
 
-seed_admin()
-
 SECRET_KEY = os.environ.get("SECRET_KEY", "secret123")
 ALGORITHM = "HS256"
 
@@ -71,6 +69,8 @@ def hash_password(password: str) -> str:
 
 def verify_password(password: str, hashed: str) -> bool:
     return bcrypt.checkpw(password.encode('utf-8'), hashed.encode('utf-8'))
+
+seed_admin()
 
 # In-memory caches (per-session, supplements DB)
 user_documents_context = {}
