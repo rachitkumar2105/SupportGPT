@@ -106,6 +106,7 @@
 
             authError.style.display = 'none';
             authSuccess.style.display = 'none';
+            document.querySelectorAll('input').forEach(i => i.value = '');
 
             if (tab === 'login') {
                 loginForm.classList.remove('hidden');
@@ -196,8 +197,9 @@
                 return;
             }
 
-            if (password.length < 4) {
-                showAuthError('Password must be at least 4 characters.');
+            const pwRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*(),.?":{}|<>]).{6,}$/;
+            if (!pwRegex.test(password)) {
+                showAuthError('Password must be at least 6 characters and include 1 uppercase, 1 lowercase, 1 digit, and 1 special symbol.');
                 return;
             }
 

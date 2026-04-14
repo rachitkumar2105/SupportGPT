@@ -235,8 +235,9 @@ def signup(data: dict, db: Session = Depends(get_db)):
     if len(username) < 3:
         raise HTTPException(400, "Username must be at least 3 characters")
 
-    if len(password) < 4:
-        raise HTTPException(400, "Password must be at least 4 characters")
+    import re
+    if len(password) < 6 or not re.search(r"[A-Z]", password) or not re.search(r"[a-z]", password) or not re.search(r"\d", password) or not re.search(r"[!@#$%^&*(),.?\":{}|<>]", password):
+        raise HTTPException(400, "Password must be at least 6 characters, include one uppercase, one lowercase, one digit, and one special symbol")
 
     if role not in ["customer", "developer"]:
         role = "customer"
@@ -302,6 +303,17 @@ def get_me(current_user: User = Depends(get_current_user)):
         "points": current_user.points,
         "member_since": str(current_user.created_at)
     }
+
+@app.post("/change-password")
+def change_password(data: dict, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    new_password = data.get("password", "").strip()
+    import re
+    if len(new_password) < 6 or not re.search(r"[A-Z]", new_password) or not re.search(r"[a-z]", new_password) or not re.search(r"\d", new_password) or not re.search(r"[!@#$%^&*(),.?\":{}|<>]", new_password):
+        raise HTTPException(400, "Password must be at least 6 characters, include one uppercase, one lowercase, one digit, and one special symbol")
+    
+    current_user.password = hash_password(new_password)
+    db.commit()
+    return {"message": "Password changed successfully!"}
 
 
 # ═══════════════════════════════════════
@@ -486,8 +498,9 @@ def chat(data: dict, current_user: User = Depends(get_current_user), db: Session
 {knowledge_hint}
 
 IMPORTANT INSTRUCTIONS:
-- If you reference information from uploaded documents, mention which part/page it came from (e.g., "Based on Page 2 of your document...")
-- If you don't have enough context, say so honestly but still try to help
+- Generate a very SHORT and PRECISE answer. Avoid long paragraphs.
+- If you reference information from uploaded documents, mention which part/page it came from (e.g., "Source: Page 2")
+- If you don't have enough context, say so context but still try to help
 - Be conversational and helpful
 - For invoice-related queries, extract and present key details clearly
 - If the user reports an issue, acknowledge it empathetically
@@ -701,7 +714,7 @@ def update_ticket(ticket_id: int, data: dict, current_user: User = Depends(get_c
     ticket = db.query(Ticket).filter(Ticket.id == ticket_id).first()
     if not ticket:
         raise HTTPException(404, "Ticket not found")
-    if current_user.role != "admin" and ticket.username != current_user.username:
+    if current_user.role not in ["admin", "developer"] and ticket.username != current_user.username:
         raise HTTPException(403, "Not authorized")
 
     if "status" in data:
@@ -796,8 +809,11 @@ def get_public_analytics(current_user: User = Depends(get_current_user), db: Ses
 # ═══════════════════════════════════════
 
 @app.get("/leaderboard")
-def get_leaderboard(db: Session = Depends(get_db)):
-    users = db.query(User).order_by(desc(User.points)).limit(20).all()
+def get_leaderboard(current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    query = db.query(User)
+    if current_user.role != "admin":
+        query = query.filter(User.role == current_user.role)
+    users = query.order_by(desc(User.points)).limit(20).all()
     return [{
         "rank": i + 1,
         "username": u.username,

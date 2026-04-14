@@ -1396,3 +1396,91 @@ input::placeholder, textarea::placeholder {
 }
 
 .admin-user-item .user-avatar { width: 32px; height: 32px; font-size: 12px; }
+
+/* ═══════════════════════════════════════ */
+/* LIGHT THEME OVERRIDES                   */
+/* ═══════════════════════════════════════ */
+body.light-theme {
+    --bg-primary: #ffffff;
+    --bg-secondary: #f0f2f5;
+    --bg-tertiary: #e4e6e9;
+    --text-primary: #1c1e21;
+    --text-secondary: #606770;
+    --border-color: #ccd0d5;
+    --panel-bg: rgba(255, 255, 255, 0.85);
+    background: var(--bg-primary);
+    color: var(--text-primary);
+}
+
+body.light-theme .auth-card,
+body.light-theme .main-panel,
+body.light-theme .sidebar-nav {
+    background: var(--panel-bg);
+    border-color: var(--border-color);
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+}
+
+body.light-theme .msg {
+    background: var(--bg-secondary);
+    color: var(--text-primary);
+}
+
+body.light-theme .msg.user-msg {
+    background: var(--primary);
+    color: #fff;
+}
+
+body.light-theme .chat-input-wrapper {
+    background: var(--bg-secondary);
+    border-color: var(--border-color);
+}
+
+body.light-theme input, 
+body.light-theme .dropdown,
+body.light-theme .role-option {
+    background: var(--bg-tertiary);
+    color: var(--text-primary);
+    border-color: var(--border-color);
+}
+
+body.light-theme .menu-item:hover,
+body.light-theme .menu-item.active {
+    background: var(--bg-tertiary);
+}
+
+body.light-theme .bg-glow, body.light-theme .bg-glow-2 {
+    opacity: 0.15;
+}
+
+body.light-theme .stats-card,
+body.light-theme .chart-container,
+body.light-theme .ticket-card {
+    background: var(--bg-secondary);
+    border-color: var(--border-color);
+}
+
+body.light-theme .text-secondary {
+    color: var(--text-secondary) !important;
+}
+
+.chat-suggestions {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 10px;
+    flex-wrap: wrap;
+}
+.chat-suggestions .suggestion-btn {
+    background: var(--panel-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    padding: 6px 12px;
+    font-size: 13px;
+    color: var(--text-secondary);
+    cursor: pointer;
+    transition: all 0.2s;
+}
+.chat-suggestions .suggestion-btn:hover {
+    background: var(--primary);
+    color: #fff;
+    border-color: var(--primary);
+}
