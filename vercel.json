@@ -6,7 +6,7 @@
   "rewrites": [
     {
       "source": "/api/(.*)",
-      "destination": "https://replace-with-huggingface-url.hf.space/$1"
+      "destination": "https://rachitkumar2105-supportgpt-backend.hf.space/$1"
     }
   ]
 }
