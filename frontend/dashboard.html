@@ -321,17 +321,49 @@
                 <div class="page-view" id="page-about">
                     <div class="settings-section">
                         <div class="settings-group">
-                            <h3>ℹ️ About SupportGPT</h3>
-                            <p class="text-secondary" style="font-size:14px; line-height: 1.6;">
-                                <strong>SupportGPT</strong> is a cutting-edge AI SaaS designed to streamline support systems using large language models. <br><br>
-                                <strong>🌟 Speciality:</strong> Unlike legacy systems, SupportGPT dynamically learns from your PDFs, ranks active contributors via Gamification, and resolves queries autonomously.<br><br>
-                                <strong>🛠 How to Use & Debug:</strong> <br>
-                                1. Upload your documents in the <i>Upload Docs</i> tab.<br>
-                                2. Chat with the AI! It will reference your specific documents.<br>
-                                3. Support Issues? Just ask to create a ticket and developers will resolve it.<br>
-                                4. Facing Bugs? Paste the error log in the chat, the AI will diagnose it instantly.<br><br>
-                                <strong>🏆 Contribute & Earn Points:</strong> Provide feedback on AI answers (👍/👎) to enhance our dataset. Top users earn points and achieve glory on the Leaderboard!
-                            </p>
+                            <h2 style="margin-bottom: 24px;">ℹ️ About SupportGPT</h2>
+                            
+                            <div class="about-card glass-panel" style="margin-bottom: 24px;">
+                                <h3>🚀 What We Do</h3>
+                                <p class="text-secondary">SupportGPT is an AI-first support platform that transforms how businesses handle customer queries. We use advanced LLMs (Large Language Models) to provide instant, accurate answers by learning directly from your uploaded documents and past resolutions.</p>
+                            </div>
+
+                            <div class="about-grid">
+                                <div class="about-card glass-panel">
+                                    <h3>📖 How to Use</h3>
+                                    <ul class="text-secondary" style="margin-left: 20px;">
+                                        <li><strong>Upload:</strong> Go to 'Upload Docs' and add your invoices, PDFs, or guides.</li>
+                                        <li><strong>Chat:</strong> Use 'AI Chat' to ask questions about your documents.</li>
+                                        <li><strong>Earn:</strong> Get points for every interaction and climb the leaderboard!</li>
+                                    </ul>
+                                </div>
+                                <div class="about-card glass-panel">
+                                    <h3>🛠️ Resolve Queries</h3>
+                                    <p class="text-secondary">If the AI can't help, simply ask to "Create a ticket". Our <strong>Developer Team</strong> will review your issue, provide a custom solution, and you'll be notified automatically.</p>
+                                </div>
+                            </div>
+
+                            <div class="about-card glass-panel" style="margin-top: 24px;">
+                                <h3>✨ Key Features</h3>
+                                <div class="features-list">
+                                    <div class="feature-item">
+                                        <span class="feature-icon">🔍</span>
+                                        <div><strong>RAG Search:</strong> AI searches through your PDFs in real-time.</div>
+                                    </div>
+                                    <div class="feature-item">
+                                        <span class="feature-icon">🎙️</span>
+                                        <div><strong>Voice Support:</strong> Speak your queries for hands-free support.</div>
+                                    </div>
+                                    <div class="feature-item">
+                                        <span class="feature-icon">🛡️</span>
+                                        <div><strong>Smart Ticketing:</strong> Automated ticket creation for complex issues.</div>
+                                    </div>
+                                    <div class="feature-item">
+                                        <span class="feature-icon">📊</span>
+                                        <div><strong>Live Analytics:</strong> Track platform performance and user engagement.</div>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -910,22 +942,42 @@
                 
                 let devInfo = '';
                 if(t.status === 'Resolved' && t.developer) {
-                    devInfo = `<div style="font-size:12px; color:var(--success); margin-top:6px;">🛠️ Solved by Dev: <strong>${t.developer}</strong> at ${new Date(t.resolved_at).toLocaleString()}</div>`;
+                    devInfo = `
+                        <div class="dev-response-bubble">
+                            <div class="dev-header">💬 Response from Support Team, SupportGPT</div>
+                            <div class="dev-content">${escapeHtml(t.developer_response || 'Issue has been resolved.')}</div>
+                            <div class="dev-footer">Solved by <strong>${t.developer}</strong> • ${new Date(t.resolved_at).toLocaleString()}</div>
+                        </div>
+                    `;
+                    
+                    // Customer can rate if they haven't already
+                    if (ROLE === 'customer' && !t.rating) {
+                        devInfo += `
+                            <button class="btn btn-outline btn-sm" style="margin-top:10px;" onclick="showTicketFeedbackModal(${t.id})">⭐ Rate & Feedback</button>
+                        `;
+                    } else if (t.rating) {
+                        devInfo += `
+                            <div class="customer-feedback-display">
+                                <span class="stars">${'⭐'.repeat(t.rating)}</span>
+                                <p class="feedback-text">"${escapeHtml(t.feedback_to_dev || '')}"</p>
+                            </div>
+                        `;
+                    }
                 }
 
                 let controls = '';
                 if(ROLE === 'developer' && t.status !== 'Resolved') {
                     controls = `
-                        <select onchange="updateTicketStatus(${t.id}, this.value)" style="margin-top:10px; font-size:12px; padding:4px 8px;">
-                            <option value="Open" ${t.status==='Open'?'selected':''}>Open</option>
-                            <option value="In Progress" ${t.status==='In Progress'?'selected':''}>In Progress</option>
-                            <option value="Resolved">Mark as Resolved</option>
-                        </select>
+                        <div style="margin-top:15px; border-top: 1px solid var(--border-glass); padding-top:15px;">
+                            <label style="font-size:12px; display:block; margin-bottom:5px;">Your Response to Customer:</label>
+                            <textarea id="devResp-${t.id}" class="form-control" rows="3" placeholder="Explain the resolution..."></textarea>
+                            <button class="btn btn-primary btn-sm" style="margin-top:8px;" onclick="resolveTicket(${t.id})">Send & Close Ticket</button>
+                        </div>
                     `;
                 }
 
                 return `
-                    <div class="ticket-card">
+                    <div class="ticket-card glass-panel">
                         <div class="ticket-top">
                             <span class="ticket-id">#${t.id}</span>
                             <span class="badge ${statusClass}">${t.status}</span>
@@ -1022,6 +1074,84 @@
             loadTickets();
         } catch(e) {
             showToast('Error', 'Failed to update ticket', 'error');
+        }
+    }
+
+    async function resolveTicket(tid) {
+        const responseText = document.getElementById(`devResp-${tid}`).value.trim();
+        if (!responseText) {
+            showToast('Wait!', 'Please provide a response for the customer before closing.', 'warning');
+            return;
+        }
+
+        try {
+            await apiRequest('/tickets/' + tid, 'PUT', { 
+                developer_response: responseText,
+                status: 'Resolved' 
+            });
+            showToast('Ticket Resolved', 'Message sent to customer and ticket closed.', 'success');
+            loadTickets();
+        } catch(e) {
+            showToast('Error', 'Failed to resolve ticket', 'error');
+        }
+    }
+
+    function showTicketFeedbackModal(tid) {
+        const modal = document.getElementById('modalContent');
+        modal.innerHTML = `
+            <div class="modal-header">
+                <h3>⭐ Rate Support GPT Resolution</h3>
+                <button class="modal-close" onclick="closeModal()">✕</button>
+            </div>
+            <div class="form-group">
+                <label>Rating</label>
+                <div class="rating-stars" id="starRating">
+                    <span onclick="setRating(1)">⭐</span>
+                    <span onclick="setRating(2)">⭐</span>
+                    <span onclick="setRating(3)">⭐</span>
+                    <span onclick="setRating(4)">⭐</span>
+                    <span onclick="setRating(5)">⭐</span>
+                </div>
+                <input type="hidden" id="ticketRatingVal" value="5">
+            </div>
+            <div class="form-group">
+                <label>Your Feedback (optional)</label>
+                <textarea id="ticketFeedbackText" rows="3" placeholder="How was your experience with our support team?"></textarea>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-primary" onclick="submitTicketFeedback(${tid})">Submit Feedback</button>
+            </div>
+        `;
+        document.getElementById('modalOverlay').classList.add('active');
+        setRating(5); // Default
+    }
+
+    let currentRating = 5;
+    function setRating(r) {
+        currentRating = r;
+        const stars = document.querySelectorAll('.rating-stars span');
+        stars.forEach((s, i) => {
+            if (i < r) s.style.opacity = '1';
+            else s.style.opacity = '0.3';
+        });
+    }
+
+    async function submitTicketFeedback(tid) {
+        const feedback = document.getElementById('ticketFeedbackText').value.trim();
+        try {
+            await apiRequest(`/tickets/${tid}/feedback`, 'POST', { 
+                rating: currentRating,
+                feedback: feedback 
+            });
+            showToast('Thank You!', 'Your feedback has been recorded.', 'success');
+            closeModal();
+            loadTickets();
+            // Refresh points
+            const {data} = await apiRequest('/me');
+            localStorage.setItem('points', data.points);
+            document.getElementById('userPoints').textContent = data.points + ' ⭐';
+        } catch (e) {
+            showToast('Error', 'Failed to submit feedback', 'error');
         }
     }
 

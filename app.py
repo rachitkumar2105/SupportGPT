@@ -34,14 +34,15 @@ app = FastAPI(title="SupportGPT", version="3.0")
 Base.metadata.create_all(bind=engine)
 
 
-# ─── Seed default admin user on startup ───
-def seed_admin():
+# ─── Seed default users on startup ───
+def seed_users():
     db = SessionLocal()
     try:
+        # Seed Admin
         ADMIN_USERNAME = "admin@123"
         ADMIN_PASSWORD = "admin@123"
-        existing = db.query(User).filter(User.username == ADMIN_USERNAME).first()
-        if not existing:
+        existing_admin = db.query(User).filter(User.username == ADMIN_USERNAME).first()
+        if not existing_admin:
             admin = User(
                 username=ADMIN_USERNAME,
                 email="admin@system.local",
@@ -53,14 +54,33 @@ def seed_admin():
             db.commit()
             print(f"✅ Default admin user created: {ADMIN_USERNAME}")
         else:
-            # Ensure the existing user has admin role and correct password
-            existing.role = "admin"
-            existing.password = hash_password(ADMIN_PASSWORD)
+            existing_admin.role = "admin"
+            existing_admin.password = hash_password(ADMIN_PASSWORD)
             db.commit()
-            print(f"✅ Admin user verified/updated: {ADMIN_USERNAME}")
+
+        # Seed Developer
+        DEV_USERNAME = "developer@123"
+        DEV_PASSWORD = "developer@123"
+        existing_dev = db.query(User).filter(User.username == DEV_USERNAME).first()
+        if not existing_dev:
+            dev = User(
+                username=DEV_USERNAME,
+                email="developer@system.local",
+                password=hash_password(DEV_PASSWORD),
+                role="developer",
+                points=5000
+            )
+            db.add(dev)
+            db.commit()
+            print(f"✅ Default developer user created: {DEV_USERNAME}")
+        else:
+            existing_dev.role = "developer"
+            existing_dev.password = hash_password(DEV_PASSWORD)
+            db.commit()
     finally:
         db.close()
 
+seed_users()
 SECRET_KEY = os.environ.get("SECRET_KEY", "secret123")
 ALGORITHM = "HS256"
 
@@ -69,8 +89,6 @@ def hash_password(password: str) -> str:
 
 def verify_password(password: str, hashed: str) -> bool:
     return bcrypt.checkpw(password.encode('utf-8'), hashed.encode('utf-8'))
-
-seed_admin()
 
 # In-memory caches (per-session, supplements DB)
 user_documents_context = {}
@@ -227,20 +245,8 @@ def signup(data: dict, db: Session = Depends(get_db)):
     username = data.get("username", "").strip()
     password = data.get("password", "").strip()
     email = data.get("email", "").strip() or None
-    role = data.get("role", "customer").strip()
-
-    if not username or not password:
-        raise HTTPException(400, "Username and password are required")
-
-    if len(username) < 3:
-        raise HTTPException(400, "Username must be at least 3 characters")
-
-    import re
-    if len(password) < 6 or not re.search(r"[A-Z]", password) or not re.search(r"[a-z]", password) or not re.search(r"\d", password) or not re.search(r"[!@#$%^&*(),.?\":{}|<>]", password):
-        raise HTTPException(400, "Password must be at least 6 characters, include one uppercase, one lowercase, one digit, and one special symbol")
-
-    if role not in ["customer", "developer"]:
-        role = "customer"
+    # Forced role for new signups
+    role = "customer"
 
     existing = db.query(User).filter(User.username == username).first()
     if existing:
@@ -684,6 +690,9 @@ def get_tickets(current_user: User = Depends(get_current_user), db: Session = De
         "created_at": str(t.created_at),
         "ai_response": t.ai_response,
         "developer": getattr(t, "developer_username", None),
+        "developer_response": getattr(t, "developer_response", None),
+        "rating": getattr(t, "rating", None),
+        "feedback_to_dev": getattr(t, "feedback_to_dev", None),
         "resolved_at": str(t.resolved_at) if getattr(t, "resolved_at", None) else None
     } for t in tickets]
 
@@ -721,9 +730,14 @@ def update_ticket(ticket_id: int, data: dict, current_user: User = Depends(get_c
 
     if "status" in data:
         ticket.status = data["status"]
-        if ticket.status == "Resolved" and current_user.role in ["admin", "developer"]:
-            ticket.developer_username = current_user.username
-            ticket.resolved_at = datetime.datetime.utcnow()
+    if "developer_response" in data and current_user.role == "developer":
+        ticket.developer_response = data["developer_response"]
+        ticket.status = "Resolved"
+        ticket.developer_username = current_user.username
+        ticket.resolved_at = datetime.datetime.utcnow()
+        # Award points to developer
+        current_user.points += 20
+        
     if "priority" in data:
         ticket.priority = data["priority"]
     if "ai_response" in data:
@@ -731,6 +745,25 @@ def update_ticket(ticket_id: int, data: dict, current_user: User = Depends(get_c
 
     db.commit()
     return {"message": f"Ticket #{ticket_id} updated"}
+
+@app.post("/tickets/{ticket_id}/feedback")
+def rate_and_feedback_ticket(ticket_id: int, data: dict, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    ticket = db.query(Ticket).filter(Ticket.id == ticket_id).first()
+    if not ticket:
+        raise HTTPException(404, "Ticket not found")
+    if ticket.username != current_user.username:
+        raise HTTPException(403, "Only the customer who raised the ticket can provide feedback")
+    if ticket.status != "Resolved":
+        raise HTTPException(400, "Feedback can only be provided for resolved tickets")
+        
+    ticket.rating = data.get("rating")
+    ticket.feedback_to_dev = data.get("feedback")
+    
+    # Award points to customer for feedback
+    current_user.points += 5
+    db.commit()
+    
+    return {"message": "Thank you for your rating and feedback! +5 points 🌟"}
 
 
 # ═══════════════════════════════════════
@@ -815,10 +848,8 @@ def get_public_analytics(current_user: User = Depends(get_current_user), db: Ses
 
 @app.get("/leaderboard")
 def get_leaderboard(current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
-    query = db.query(User)
-    if current_user.role != "admin":
-        query = query.filter(User.role == current_user.role)
-    users = query.order_by(desc(User.points)).limit(20).all()
+    # Leaderboard only for customers
+    users = db.query(User).filter(User.role == "customer").order_by(desc(User.points)).limit(20).all()
     return [{
         "rank": i + 1,
         "username": u.username,

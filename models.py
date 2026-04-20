@@ -24,6 +24,9 @@ class Ticket(Base):
     priority = Column(String, default="Medium")  # Low, Medium, High, Critical
     ai_response = Column(Text, nullable=True)
     developer_username = Column(String, nullable=True)
+    developer_response = Column(Text, nullable=True)
+    rating = Column(Integer, nullable=True)
+    feedback_to_dev = Column(Text, nullable=True)
     resolved_at = Column(DateTime, nullable=True)
     created_at = Column(DateTime, default=datetime.datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.datetime.utcnow, onupdate=datetime.datetime.utcnow)

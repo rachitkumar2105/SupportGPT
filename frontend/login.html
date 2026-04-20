@@ -62,19 +62,7 @@
                     <label for="signupPassword">Password</label>
                     <input id="signupPassword" type="password" placeholder="Choose a password (min 4 chars)" autocomplete="new-password">
                 </div>
-                <div class="form-group">
-                    <label>Select Your Role</label>
-                    <div class="role-selector">
-                        <div class="role-option active" onclick="selectRole('customer')" data-role="customer">
-                            <span class="role-emoji">🧑</span>
-                            Customer
-                        </div>
-                        <div class="role-option" onclick="selectRole('developer')" data-role="developer">
-                            <span class="role-emoji">👨‍💻</span>
-                            Developer
-                        </div>
-                    </div>
-                </div>
+                <!-- Role is automatically set to customer by backend -->
                 <button onclick="handleSignup()" class="btn btn-primary btn-block btn-lg" id="signupBtn">
                     Create Account 🚀
                 </button>
