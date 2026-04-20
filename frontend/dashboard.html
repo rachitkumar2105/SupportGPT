@@ -28,10 +28,10 @@
         <!-- ═══ SIDEBAR ═══ -->
         <nav class="sidebar-nav" id="sidebarNav">
             <div class="sidebar-brand">
-                <span class="brand-icon">🧾</span>
+                <div class="brand-logo-accent"></div>
                 <div>
-                    <div class="brand-text">Intelligent Invoice<br>Processing</div>
-                    <div class="brand-version">v3.0 • AI Powered</div>
+                    <div class="brand-text">SupportGPT</div>
+                    <div class="brand-version">Enterprise v3.0</div>
                 </div>
             </div>
 
@@ -39,13 +39,13 @@
                 <div class="menu-section">
                     <div class="menu-section-title">Main</div>
                     <div class="menu-item active" onclick="navigateTo('chat')" data-page="chat">
-                        <span class="menu-icon">💬</span> AI Chat
+                        Dashboard
                     </div>
                     <div class="menu-item" onclick="navigateTo('upload')" data-page="upload">
-                        <span class="menu-icon">📄</span> Upload Docs
+                        Documents
                     </div>
                     <div class="menu-item" onclick="navigateTo('tickets')" data-page="tickets">
-                        <span class="menu-icon">🎫</span> Tickets
+                        Support Tickets
                         <span class="menu-badge" id="ticketBadge" style="display:none">0</span>
                     </div>
                 </div>
@@ -53,30 +53,30 @@
                 <div class="menu-section">
                     <div class="menu-section-title">Insights</div>
                     <div class="menu-item" onclick="navigateTo('analytics')" data-page="analytics">
-                        <span class="menu-icon">📊</span> Analytics
+                        Analytics
                     </div>
                     <div class="menu-item" onclick="navigateTo('leaderboard')" data-page="leaderboard">
-                        <span class="menu-icon">🏆</span> Leaderboard
+                        Community
                     </div>
                 </div>
 
                 <div class="menu-section" id="adminSection" style="display:none">
                     <div class="menu-section-title">Admin</div>
                     <div class="menu-item" onclick="navigateTo('admin')" data-page="admin">
-                        <span class="menu-icon">👑</span> Admin Panel
+                        Administration
                     </div>
                 </div>
 
                 <div class="menu-section">
                     <div class="menu-section-title">Account</div>
                     <div class="menu-item" onclick="navigateTo('settings')" data-page="settings">
-                        <span class="menu-icon">⚙️</span> Settings
+                        <span class="menu-icon">Settings</span>
                     </div>
                     <div class="menu-item" onclick="navigateTo('about')" data-page="about">
-                        <span class="menu-icon">ℹ️</span> About
+                        <span class="menu-icon">Help & Resources</span>
                     </div>
                     <div class="menu-item" onclick="handleLogout()" style="color: var(--danger);">
-                        <span class="menu-icon">🚪</span> Logout
+                        Sign Out
                     </div>
                 </div>
             </div>
@@ -88,7 +88,7 @@
                         <div class="user-name" id="userName">User</div>
                         <div class="user-role" id="userRole">customer</div>
                     </div>
-                    <div class="user-points" id="userPoints">0 ⭐</div>
+                    <div class="user-points" id="userPoints">0 pts</div>
                 </div>
             </div>
         </nav>
@@ -102,10 +102,10 @@
                 </div>
                 <div class="top-bar-right">
                     <button class="btn btn-ghost btn-sm" onclick="toggleTheme()" title="Toggle Theme">
-                        🌓 Theme
+                        Toggle Theme
                     </button>
                     <button class="btn btn-ghost btn-sm" onclick="navigateTo('chat')" title="New Chat">
-                        💬 Chat
+                        New Chat
                     </button>
                     <button class="btn btn-outline btn-sm" onclick="handleLogout()">Logout</button>
                 </div>
@@ -120,15 +120,14 @@
                     <div class="chat-container">
                         <div class="chat-messages" id="chatMessages">
                             <div class="msg ai-msg">
-                                <div class="msg-header">🤖 AI Assistant</div>
-                                <div>Welcome to <strong>SupportGPT</strong>! I'm your AI-powered support assistant. I can help you with:
+                                <div class="msg-header">SupportGPT AI</div>
+                                <div>Welcome to the <strong>SupportGPT Dashboard</strong>. I am here to assist you with Enterprise-grade support automation.
                                 <br><br>
-                                📄 <strong>Document Analysis</strong> — Upload invoices, receipts, or PDFs and ask questions<br>
-                                🎫 <strong>Ticket Management</strong> — Report issues and I'll create tickets automatically<br>
-                                🔍 <strong>Smart Search</strong> — Find answers from your knowledge base<br>
-                                🐛 <strong>Debug Mode</strong> — Paste errors and I'll help diagnose them<br>
-                                🎙️ <strong>Voice Input</strong> — Click the mic button to speak<br>
-                                <br>Upload some documents first, then ask me anything!</div>
+                                • <strong>Document Management</strong> — Upload and query institutional knowledge<br>
+                                • <strong>Service Ticketing</strong> — Automatic escalation and developer resolution<br>
+                                • <strong>Smart Knowledge Base</strong> — AI-driven search across all your resources<br>
+                                • <strong>Technical Diagnostics</strong> — Automated error analysis and fix suggestions<br>
+                                <br>To begin, upload a document or describe your request below.</div>
                             </div>
                         </div>
 
@@ -205,16 +204,16 @@
                 <div class="page-view" id="page-tickets">
                     <div class="tickets-header">
                         <div>
-                            <h2 style="margin-bottom: 4px;">🎫 Support Tickets</h2>
-                            <p class="text-secondary">AI automatically creates tickets when issues are detected</p>
+                            <h2 style="margin-bottom: 4px;">Support Tickets</h2>
+                            <p class="text-secondary">Enterprise-grade service ticket tracking and resolution</p>
                         </div>
                         <button class="btn btn-primary" id="btnNewTicket" onclick="showNewTicketModal()">+ New Ticket</button>
                     </div>
                     
                     <div id="adminTicketStats" class="analytics-grid" style="display:none; margin-bottom: 24px;">
-                        <div class="stat-card"><div class="stat-icon">📝</div><div class="stat-value" id="tsTotal">0</div><div class="stat-label">Total Raised</div></div>
-                        <div class="stat-card"><div class="stat-icon">⏳</div><div class="stat-value" id="tsPending">0</div><div class="stat-label">Yet To Solve</div></div>
-                        <div class="stat-card"><div class="stat-icon">✅</div><div class="stat-value" id="tsSolved">0</div><div class="stat-label">Solved</div></div>
+                        <div class="stat-card"><div class="stat-value" id="tsTotal">0</div><div class="stat-label">Total Volume</div></div>
+                        <div class="stat-card"><div class="stat-value" id="tsPending">0</div><div class="stat-label">Open Issues</div></div>
+                        <div class="stat-card"><div class="stat-value" id="tsSolved">0</div><div class="stat-label">Resolved</div></div>
                     </div>
 
                     <div id="ticketsList"></div>
@@ -224,7 +223,7 @@
                      PAGE: ANALYTICS
                      ═══════════════════════════════════ -->
                 <div class="page-view" id="page-analytics">
-                    <h2 style="margin-bottom: 20px;">📊 Analytics Dashboard</h2>
+                    <h2 style="margin-bottom: 20px;">Service Analytics</h2>
                     <div class="stats-grid" id="statsGrid"></div>
                     <div class="analytics-grid">
                         <div class="chart-container">
@@ -247,8 +246,8 @@
                      ═══════════════════════════════════ -->
                 <div class="page-view" id="page-leaderboard">
                     <div style="text-align:center; margin-bottom:24px;">
-                        <h2>🏆 Leaderboard</h2>
-                        <p class="text-secondary">Top contributors earn points through chats, feedback, and uploads</p>
+                        <h2>Community Contributors</h2>
+                        <p class="text-secondary">Top users ranked by knowledge base contributions and interactions</p>
                     </div>
                     <div class="leaderboard-list" id="leaderboardList"></div>
                 </div>
@@ -257,7 +256,7 @@
                      PAGE: ADMIN
                      ═══════════════════════════════════ -->
                 <div class="page-view" id="page-admin">
-                    <h2 style="margin-bottom: 20px;">👑 Admin Panel</h2>
+                    <h2 style="margin-bottom: 20px;">System Administration</h2>
                     <div id="adminUsersList"></div>
                 </div>
 
@@ -266,10 +265,10 @@
                      ═══════════════════════════════════ -->
                 <div class="page-view" id="page-settings">
                     <div class="settings-section">
-                        <h2 style="margin-bottom: 20px;">⚙️ Settings</h2>
+                        <h2 style="margin-bottom: 20px;">Profile Settings</h2>
 
                         <div class="settings-group">
-                            <h3>👤 Profile</h3>
+                            <h3>User Profile</h3>
                             <div class="form-group">
                                 <label>Username</label>
                                 <input type="text" id="settingsUsername" disabled>
@@ -289,7 +288,7 @@
                         </div>
 
                         <div class="settings-group">
-                            <h3>🔐 Change Password</h3>
+                            <h3>Security</h3>
                             <div class="form-group">
                                 <label>New Password</label>
                                 <input type="password" id="newPassword" placeholder="Minimum 6 chars, 1 uppercase, 1 digit, 1 symbol">
@@ -302,14 +301,8 @@
                         </div>
 
                         <div class="settings-group">
-                            <h3>🗑️ Data Management</h3>
-                            <p class="text-secondary" style="margin-bottom:16px; font-size:13px;">Clear your chat history and start fresh.</p>
-                            <button class="btn btn-danger" onclick="clearHistory()">Clear Chat History</button>
-                        </div>
-
-                        <div class="settings-group">
-                            <h3>🗑️ Data Management</h3>
-                            <p class="text-secondary" style="margin-bottom:16px; font-size:13px;">Clear your chat history and start fresh.</p>
+                            <h3>Data Management</h3>
+                            <p class="text-secondary" style="margin-bottom:16px; font-size:13px;">Permanently clear your conversational history and index data.</p>
                             <button class="btn btn-danger" onclick="clearHistory()">Clear Chat History</button>
                         </div>
                     </div>
@@ -321,16 +314,16 @@
                 <div class="page-view" id="page-about">
                     <div class="settings-section">
                         <div class="settings-group">
-                            <h2 style="margin-bottom: 24px;">ℹ️ About SupportGPT</h2>
+                            <h2 style="margin-bottom: 24px;">System Information</h2>
                             
                             <div class="about-card glass-panel" style="margin-bottom: 24px;">
-                                <h3>🚀 What We Do</h3>
+                                <h3>Mission & Purpose</h3>
                                 <p class="text-secondary">SupportGPT is an AI-first support platform that transforms how businesses handle customer queries. We use advanced LLMs (Large Language Models) to provide instant, accurate answers by learning directly from your uploaded documents and past resolutions.</p>
                             </div>
 
                             <div class="about-grid">
                                 <div class="about-card glass-panel">
-                                    <h3>📖 How to Use</h3>
+                                    <h3>Workflow Guide</h3>
                                     <ul class="text-secondary" style="margin-left: 20px;">
                                         <li><strong>Upload:</strong> Go to 'Upload Docs' and add your invoices, PDFs, or guides.</li>
                                         <li><strong>Chat:</strong> Use 'AI Chat' to ask questions about your documents.</li>
@@ -338,28 +331,28 @@
                                     </ul>
                                 </div>
                                 <div class="about-card glass-panel">
-                                    <h3>🛠️ Resolve Queries</h3>
+                                    <h3>Resolution Protocol</h3>
                                     <p class="text-secondary">If the AI can't help, simply ask to "Create a ticket". Our <strong>Developer Team</strong> will review your issue, provide a custom solution, and you'll be notified automatically.</p>
                                 </div>
                             </div>
 
                             <div class="about-card glass-panel" style="margin-top: 24px;">
-                                <h3>✨ Key Features</h3>
+                                <h3>Platform Capabilities</h3>
                                 <div class="features-list">
                                     <div class="feature-item">
-                                        <span class="feature-icon">🔍</span>
+                                        <span class="feature-icon">•</span>
                                         <div><strong>RAG Search:</strong> AI searches through your PDFs in real-time.</div>
                                     </div>
                                     <div class="feature-item">
-                                        <span class="feature-icon">🎙️</span>
+                                        <span class="feature-icon">•</span>
                                         <div><strong>Voice Support:</strong> Speak your queries for hands-free support.</div>
                                     </div>
                                     <div class="feature-item">
-                                        <span class="feature-icon">🛡️</span>
+                                        <span class="feature-icon">•</span>
                                         <div><strong>Smart Ticketing:</strong> Automated ticket creation for complex issues.</div>
                                     </div>
                                     <div class="feature-item">
-                                        <span class="feature-icon">📊</span>
+                                        <span class="feature-icon">•</span>
                                         <div><strong>Live Analytics:</strong> Track platform performance and user engagement.</div>
                                     </div>
                                 </div>
@@ -552,13 +545,13 @@
 
         if (type === 'user') {
             div.innerHTML = `
-                <div class="msg-header">👤 You</div>
+                <div class="msg-header">Account Holder</div>
                 <div>${escapeHtml(content)}</div>
             `;
         } else {
             const formattedContent = formatAIResponse(content);
             div.innerHTML = `
-                <div class="msg-header">🤖 AI Assistant</div>
+                <div class="msg-header">SupportGPT AI</div>
                 <div>${formattedContent}</div>
                 <div class="msg-actions">
                     <button class="msg-action-btn" onclick="giveFeedback(this, true, '${escapeAttr(content.substring(0, 100))}')" title="Helpful">👍</button>
@@ -863,14 +856,14 @@
                 resultDiv.style.display = 'block';
                 resultDiv.innerHTML = `
                     <div class="glass-panel" style="padding: 20px;">
-                        <h4 style="margin-bottom: 12px; color: var(--success);">✅ ${data.message}</h4>
+                        <h4 style="margin-bottom: 12px; color: var(--success);">${data.message}</h4>
                         <p class="text-secondary" style="font-size: 13px; margin-bottom: 8px;">
-                            📊 Type: ${data.file_type} | Characters: ${data.characters_extracted?.toLocaleString() || 0}
+                            Type: ${data.file_type} | Characters: ${data.characters_extracted?.toLocaleString() || 0}
                             ${data.pages ? ` | Pages: ${data.pages}` : ''}
-                            | Points: +${data.points_earned}
+                            | Points Earned: +${data.points_earned}
                         </p>
                         ${data.summary ? `<div style="margin-top: 12px; padding: 12px; background: rgba(0,0,0,0.2); border-radius: 8px; font-size: 13px;">
-                            <strong>📝 AI Summary:</strong><br>${data.summary.replace(/\n/g, '<br>')}
+                            <strong>AI Summary:</strong><br>${data.summary.replace(/\n/g, '<br>')}
                         </div>` : ''}
                     </div>
                 `;
@@ -881,7 +874,7 @@
                 // Update points
                 const pts = parseInt(localStorage.getItem('points') || '0') + (data.points_earned || 5);
                 localStorage.setItem('points', pts);
-                document.getElementById('userPoints').textContent = pts + ' ⭐';
+                document.getElementById('userPoints').textContent = pts + ' pts';
             } else {
                 statusText.textContent = 'Upload failed';
                 showToast('Upload Failed', data.detail || 'Error processing file', 'error');
@@ -905,13 +898,12 @@
             const { data } = await apiRequest('/documents');
             const container = document.getElementById('docListItems');
             if (!data || data.length === 0) {
-                container.innerHTML = '<div class="empty-state"><span class="empty-icon">📭</span><div class="empty-title">No documents yet</div><div class="empty-desc">Upload your first document to build your AI knowledge base</div></div>';
+                container.innerHTML = '<div class="empty-state"><div class="empty-title">Initial state empty</div><div class="empty-desc">Upload documents to populate the knowledge repository</div></div>';
                 return;
             }
 
             container.innerHTML = data.map(doc => `
                 <div class="doc-item">
-                    <span class="doc-icon">${doc.file_type === 'pdf' ? '📄' : doc.file_type === 'image' ? '🖼️' : '📝'}</span>
                     <div class="doc-details">
                         <div class="doc-name">${doc.filename}</div>
                         <div class="doc-meta">${doc.file_type.toUpperCase()} ${doc.pages ? `• ${doc.pages} pages` : ''} • ${new Date(doc.uploaded_at).toLocaleDateString()}</div>
@@ -932,7 +924,7 @@
             const container = document.getElementById('ticketsList');
 
             if (!data || data.length === 0) {
-                container.innerHTML = '<div class="empty-state"><span class="empty-icon">🎫</span><div class="empty-title">No tickets yet</div><div class="empty-desc">Tickets are created automatically when you report issues in chat, or you can create one manually.</div></div>';
+                container.innerHTML = '<div class="empty-state"><div class="empty-title">No active tickets</div><div class="empty-desc">Service inquiries will appear here for review and resolution.</div></div>';
                 return;
             }
 
@@ -944,16 +936,16 @@
                 if(t.status === 'Resolved' && t.developer) {
                     devInfo = `
                         <div class="dev-response-bubble">
-                            <div class="dev-header">💬 Response from Support Team, SupportGPT</div>
+                            <div class="dev-header">Response from Support Team</div>
                             <div class="dev-content">${escapeHtml(t.developer_response || 'Issue has been resolved.')}</div>
-                            <div class="dev-footer">Solved by <strong>${t.developer}</strong> • ${new Date(t.resolved_at).toLocaleString()}</div>
+                            <div class="dev-footer">Resolution by <strong>${t.developer}</strong> • ${new Date(t.resolved_at).toLocaleString()}</div>
                         </div>
                     `;
                     
                     // Customer can rate if they haven't already
                     if (ROLE === 'customer' && !t.rating) {
                         devInfo += `
-                            <button class="btn btn-outline btn-sm" style="margin-top:10px;" onclick="showTicketFeedbackModal(${t.id})">⭐ Rate & Feedback</button>
+                            <button class="btn btn-outline btn-sm" style="margin-top:10px;" onclick="showTicketFeedbackModal(${t.id})">Provide Feedback</button>
                         `;
                     } else if (t.rating) {
                         devInfo += `
@@ -1100,17 +1092,17 @@
         const modal = document.getElementById('modalContent');
         modal.innerHTML = `
             <div class="modal-header">
-                <h3>⭐ Rate Support GPT Resolution</h3>
+                <h3>Submit Resolution Feedback</h3>
                 <button class="modal-close" onclick="closeModal()">✕</button>
             </div>
             <div class="form-group">
-                <label>Rating</label>
+                <label>Service Rating</label>
                 <div class="rating-stars" id="starRating">
-                    <span onclick="setRating(1)">⭐</span>
-                    <span onclick="setRating(2)">⭐</span>
-                    <span onclick="setRating(3)">⭐</span>
-                    <span onclick="setRating(4)">⭐</span>
-                    <span onclick="setRating(5)">⭐</span>
+                    <span onclick="setRating(1)">Rank 1</span>
+                    <span onclick="setRating(2)">Rank 2</span>
+                    <span onclick="setRating(3)">Rank 3</span>
+                    <span onclick="setRating(4)">Rank 4</span>
+                    <span onclick="setRating(5)">Rank 5</span>
                 </div>
                 <input type="hidden" id="ticketRatingVal" value="5">
             </div>
@@ -1149,7 +1141,7 @@
             // Refresh points
             const {data} = await apiRequest('/me');
             localStorage.setItem('points', data.points);
-            document.getElementById('userPoints').textContent = data.points + ' ⭐';
+            document.getElementById('userPoints').textContent = data.points + ' pts';
         } catch (e) {
             showToast('Error', 'Failed to submit feedback', 'error');
         }
@@ -1343,20 +1335,18 @@
             const container = document.getElementById('leaderboardList');
 
             if (!data || data.length === 0) {
-                container.innerHTML = '<div class="empty-state"><span class="empty-icon">🏆</span><div class="empty-title">No users yet</div></div>';
+                container.innerHTML = '<div class="empty-state"><div class="empty-title">Initial state empty</div></div>';
                 return;
             }
 
-            const medals = ['🥇', '🥈', '🥉'];
-
             container.innerHTML = data.map(u => `
-                <div class="leaderboard-item ${u.username === USERNAME ? 'style="border-color: var(--primary);"' : ''}">
-                    <div class="rank-badge">${u.rank <= 3 ? medals[u.rank - 1] : u.rank}</div>
+                <div class="leaderboard-item ${u.username === USERNAME ? 'current-user-lb' : ''}">
+                    <div class="rank-badge">${u.rank}</div>
                     <div class="lb-user">
                         <div class="lb-name">${u.username} ${u.username === USERNAME ? '(You)' : ''}</div>
                         <div class="lb-role">${u.role}</div>
                     </div>
-                    <div class="lb-points">${u.points} ⭐</div>
+                    <div class="lb-points">${u.points} pts</div>
                 </div>
             `).join('');
         } catch (e) {
@@ -1386,7 +1376,7 @@
                         <option value="developer" ${u.role === 'developer' ? 'selected' : ''}>Developer</option>
                         <option value="admin" ${u.role === 'admin' ? 'selected' : ''}>Admin</option>
                     </select>
-                    <span class="user-points">${u.points} ⭐</span>
+                    <span class="user-points">${u.points} pts</span>
                 </div>
             `).join('');
         } catch (e) {
@@ -1412,8 +1402,8 @@
             await apiRequest('/history', 'DELETE');
             document.getElementById('chatMessages').innerHTML = `
                 <div class="msg ai-msg">
-                    <div class="msg-header">🤖 AI Assistant</div>
-                    <div>Chat history cleared. How can I help you today?</div>
+                    <div class="msg-header">SupportGPT AI</div>
+                    <div>History reset confirmed. How may I assist you further?</div>
                 </div>
             `;
             showToast('Cleared', 'Chat history has been cleared', 'success');
