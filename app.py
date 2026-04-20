@@ -35,6 +35,16 @@ Base.metadata.create_all(bind=engine)
 
 
 # ─── Seed default users on startup ───
+SECRET_KEY = os.environ.get("SECRET_KEY", "secret123")
+ALGORITHM = "HS256"
+
+def hash_password(password: str) -> str:
+    return bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
+
+def verify_password(password: str, hashed: str) -> bool:
+    return bcrypt.checkpw(password.encode('utf-8'), hashed.encode('utf-8'))
+
+# ─── Seed default users on startup ───
 def seed_users():
     db = SessionLocal()
     try:
@@ -81,14 +91,6 @@ def seed_users():
         db.close()
 
 seed_users()
-SECRET_KEY = os.environ.get("SECRET_KEY", "secret123")
-ALGORITHM = "HS256"
-
-def hash_password(password: str) -> str:
-    return bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
-
-def verify_password(password: str, hashed: str) -> bool:
-    return bcrypt.checkpw(password.encode('utf-8'), hashed.encode('utf-8'))
 
 # In-memory caches (per-session, supplements DB)
 user_documents_context = {}
