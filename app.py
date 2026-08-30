@@ -2,11 +2,13 @@ import os
 import time
 import json
 import shutil
-import asyncio
 import datetime
-from typing import Optional, List
+import numpy as np
 
-from fastapi import FastAPI, UploadFile, File, Depends, HTTPException, Header, Query
+from dotenv import load_dotenv
+load_dotenv()  # must run before importing groq_client, which reads keys at import time
+
+from fastapi import FastAPI, UploadFile, File, Depends, HTTPException, Header
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 from fastapi.staticfiles import StaticFiles
@@ -15,18 +17,18 @@ from sqlalchemy import func, desc
 from database import SessionLocal, engine, Base
 from models import (
     User, Ticket, Feedback, KnowledgeEntry,
-    AnalyticsLog, ChatHistory, DocumentStore
+    AnalyticsLog, ChatHistory, DocumentStore, DocumentChunk
 )
+from schemas import (
+    SignupRequest, LoginRequest, ChangePasswordRequest, ChatRequest,
+    FeedbackRequest, TicketCreateRequest, TicketUpdateRequest,
+    TicketFeedbackRequest, RoleUpdateRequest, VoiceRequest
+)
+import rag
+from groq_client import groq_client
 import bcrypt
 from jose import jwt, JWTError
-from dotenv import load_dotenv
-from groq import Groq
 import PyPDF2
-
-load_dotenv()
-
-GROQ_API_KEY = os.environ.get("GROQ_API_KEY")
-client = Groq(api_key=GROQ_API_KEY)
 
 app = FastAPI(title="SupportGPT", version="3.0")
 
@@ -34,67 +36,58 @@ app = FastAPI(title="SupportGPT", version="3.0")
 Base.metadata.create_all(bind=engine)
 
 
-# ─── Seed default users on startup ───
-SECRET_KEY = os.environ.get("SECRET_KEY", "secret123")
+# ─── Secrets & config ───
+SECRET_KEY = os.environ.get("SECRET_KEY")
+if not SECRET_KEY:
+    raise RuntimeError(
+        "SECRET_KEY environment variable must be set. Refusing to start with an "
+        "insecure default — JWTs would otherwise be forgeable."
+    )
 ALGORITHM = "HS256"
+
+SEED_DEMO_USERS = os.environ.get("SEED_DEMO_USERS", "false").strip().lower() == "true"
+
+ALLOWED_ORIGINS = [
+    origin.strip()
+    for origin in os.environ.get(
+        "ALLOWED_ORIGINS",
+        "http://localhost:3000,http://localhost:8000,http://127.0.0.1:8000"
+    ).split(",")
+    if origin.strip()
+]
+
 
 def hash_password(password: str) -> str:
     return bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
 
+
 def verify_password(password: str, hashed: str) -> bool:
     return bcrypt.checkpw(password.encode('utf-8'), hashed.encode('utf-8'))
 
-# ─── Seed default users on startup ───
+
+# ─── Seed demo users (local/dev only, opt-in via SEED_DEMO_USERS=true) ───
 def seed_users():
+    if not SEED_DEMO_USERS:
+        return
     db = SessionLocal()
     try:
-        # Seed Admin
-        ADMIN_USERNAME = "admin@123"
-        ADMIN_PASSWORD = "admin@123"
-        existing_admin = db.query(User).filter(User.username == ADMIN_USERNAME).first()
-        if not existing_admin:
-            admin = User(
-                username=ADMIN_USERNAME,
-                email="admin@system.local",
-                password=hash_password(ADMIN_PASSWORD),
-                role="admin",
-                points=9999
-            )
-            db.add(admin)
-            db.commit()
-            print(f"✅ Default admin user created: {ADMIN_USERNAME}")
-        else:
-            existing_admin.role = "admin"
-            existing_admin.password = hash_password(ADMIN_PASSWORD)
-            db.commit()
-
-        # Seed Developer
-        DEV_USERNAME = "developer@123"
-        DEV_PASSWORD = "developer@123"
-        existing_dev = db.query(User).filter(User.username == DEV_USERNAME).first()
-        if not existing_dev:
-            dev = User(
-                username=DEV_USERNAME,
-                email="developer@system.local",
-                password=hash_password(DEV_PASSWORD),
-                role="developer",
-                points=5000
-            )
-            db.add(dev)
-            db.commit()
-            print(f"✅ Default developer user created: {DEV_USERNAME}")
-        else:
-            existing_dev.role = "developer"
-            existing_dev.password = hash_password(DEV_PASSWORD)
-            db.commit()
+        if not db.query(User).filter(User.username == "admin@123").first():
+            db.add(User(
+                username="admin@123", email="admin@system.local",
+                password=hash_password("admin@123"), role="admin", points=9999
+            ))
+            print("Seeded demo admin user: admin@123 (SEED_DEMO_USERS=true — disable in production)")
+        if not db.query(User).filter(User.username == "developer@123").first():
+            db.add(User(
+                username="developer@123", email="developer@system.local",
+                password=hash_password("developer@123"), role="developer", points=5000
+            ))
+            print("Seeded demo developer user: developer@123 (SEED_DEMO_USERS=true — disable in production)")
+        db.commit()
     finally:
         db.close()
 
 seed_users()
-
-# In-memory caches (per-session, supplements DB)
-user_documents_context = {}
-user_chat_memory = {}
 
 # Ensure upload dirs exist
 os.makedirs("docs", exist_ok=True)
@@ -128,25 +121,10 @@ def get_current_user(authorization: str = Header(None), db: Session = Depends(ge
     return user
 
 
-# ─── Optional Auth (for endpoints that work with or without login) ───
-def get_optional_user(authorization: str = Header(None), db: Session = Depends(get_db)):
-    if not authorization or not authorization.startswith("Bearer "):
-        return None
-    token = authorization.split(" ")[1]
-    try:
-        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
-        username = payload.get("sub")
-        if username:
-            return db.query(User).filter(User.username == username).first()
-    except JWTError:
-        pass
-    return None
-
-
 # ─── CORS ───
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=ALLOWED_ORIGINS,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -169,35 +147,36 @@ def log_analytics(db: Session, action: str, user_id=None, username=None, detail=
     db.commit()
 
 
+KNOWLEDGE_SIMILARITY_THRESHOLD = 0.75
+
+
 def find_knowledge(db: Session, question: str):
-    """Search knowledge base for similar questions"""
-    keywords = question.lower().split()
-    entries = db.query(KnowledgeEntry).all()
-    best_match = None
-    best_score = 0
-    for entry in entries:
-        entry_words = entry.question.lower().split()
-        common = len(set(keywords) & set(entry_words))
-        score = common / max(len(keywords), 1)
-        if score > best_score and score > 0.5:
-            best_score = score
-            best_match = entry
-    return best_match
+    """Search the curated knowledge base (positively-rated past answers only)
+    for a semantically similar past question, via embedding cosine similarity."""
+    entries = db.query(KnowledgeEntry).filter(KnowledgeEntry.embedding.isnot(None)).all()
+    if not entries:
+        return None
+    query_vector = rag.embed_query(question)
+    candidate_vectors = np.stack([rag.blob_to_vector(e.embedding) for e in entries])
+    indices, scores = rag.top_k(query_vector, candidate_vectors, k=1)
+    if indices and scores[0] >= KNOWLEDGE_SIMILARITY_THRESHOLD:
+        return entries[indices[0]]
+    return None
 
 
 def get_role_prompt(role: str):
     """Different AI personality based on user role"""
     prompts = {
-        "admin": """You are an executive AI analytics assistant for SupportGPT. 
-        You provide data-driven insights, system performance metrics, and strategic recommendations. 
+        "admin": """You are an executive AI analytics assistant for SupportGPT.
+        You provide data-driven insights, system performance metrics, and strategic recommendations.
         Be concise, professional, and focus on actionable intelligence. Use business terminology.""",
 
-        "developer": """You are a technical AI assistant for SupportGPT. 
-        You help with debugging, code analysis, error diagnosis, and technical documentation. 
+        "developer": """You are a technical AI assistant for SupportGPT.
+        You help with debugging, code analysis, error diagnosis, and technical documentation.
         Provide detailed technical explanations with code examples when relevant. Be precise.""",
 
-        "customer": """You are a friendly, helpful AI support agent for SupportGPT. 
-        You help customers with their queries about invoices, orders, and services. 
+        "customer": """You are a friendly, helpful AI support agent for SupportGPT.
+        You help customers with their queries about invoices, orders, and services.
         Be warm, empathetic, and solution-oriented. Guide users step by step."""
     }
     return prompts.get(role, prompts["customer"])
@@ -231,11 +210,42 @@ def extract_text_from_pdf(filepath: str) -> tuple:
     return text_content, page_count
 
 
+def retrieve_relevant_chunks(db: Session, username: str, query: str, k: int = 5):
+    """Real RAG retrieval: embed the query, pull this user's persisted chunk
+    embeddings from the DB (no in-memory cache — safe across workers), and
+    return the top-k most similar chunks above a relevance threshold."""
+    rows = db.query(DocumentChunk).filter(DocumentChunk.username == username).all()
+    if not rows:
+        return []
+    candidate_vectors = np.stack([rag.blob_to_vector(r.embedding) for r in rows])
+    query_vector = rag.embed_query(query)
+    indices, scores = rag.top_k(query_vector, candidate_vectors, k=k)
+    results = []
+    for idx, score in zip(indices, scores):
+        if score < rag.RELEVANCE_THRESHOLD:
+            continue
+        row = rows[idx]
+        results.append({"content": row.content, "page": row.page_number, "score": float(score)})
+    return results
+
+
+def build_document_context(chunks):
+    if not chunks:
+        return "No relevant content found in the uploaded documents.", []
+    lines = []
+    sources = []
+    for c in chunks:
+        label = f"[Page {c['page']}]" if c["page"] else "[Source]"
+        lines.append(f"{label} {c['content']}")
+        sources.append({"page": c["page"], "relevance": round(c["score"], 3)})
+    return "\n\n".join(lines), sources
+
+
 # ─── ROUTES ───
 
 @app.get("/")
 def home():
-    return {"message": "SupportGPT API v3.0 🚀"}
+    return {"message": "SupportGPT API v3.0"}
 
 
 # ═══════════════════════════════════════
@@ -243,10 +253,10 @@ def home():
 # ═══════════════════════════════════════
 
 @app.post("/signup")
-def signup(data: dict, db: Session = Depends(get_db)):
-    username = data.get("username", "").strip()
-    password = data.get("password", "").strip()
-    email = data.get("email", "").strip() or None
+def signup(payload: SignupRequest, db: Session = Depends(get_db)):
+    username = payload.username
+    password = payload.password
+    email = payload.email
     # Forced role for new signups
     role = "customer"
 
@@ -272,16 +282,13 @@ def signup(data: dict, db: Session = Depends(get_db)):
 
     log_analytics(db, "signup", user.id, username, f"New {role} account")
 
-    return {"message": f"Account created successfully! Welcome aboard, {username}! 🎉"}
+    return {"message": f"Account created successfully! Welcome aboard, {username}!"}
 
 
 @app.post("/login")
-def login(data: dict, db: Session = Depends(get_db)):
-    username = data.get("username", "").strip()
-    password = data.get("password", "").strip()
-
-    if not username or not password:
-        raise HTTPException(400, "Username and password are required")
+def login(payload: LoginRequest, db: Session = Depends(get_db)):
+    username = payload.username.strip()
+    password = payload.password.strip()
 
     user = db.query(User).filter(User.username == username).first()
     if not user or not verify_password(password, user.password):
@@ -312,20 +319,21 @@ def get_me(current_user: User = Depends(get_current_user)):
         "member_since": str(current_user.created_at)
     }
 
+
 @app.post("/change-password")
-def change_password(data: dict, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
-    new_password = data.get("password", "").strip()
+def change_password(payload: ChangePasswordRequest, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    new_password = payload.password.strip()
     import re
     if len(new_password) < 6 or not re.search(r"[A-Z]", new_password) or not re.search(r"[a-z]", new_password) or not re.search(r"\d", new_password) or not re.search(r"[!@#$%^&*(),.?\":{}|<>]", new_password):
         raise HTTPException(400, "Password must be at least 6 characters, include one uppercase, one lowercase, one digit, and one special symbol")
-    
+
     current_user.password = hash_password(new_password)
     db.commit()
     return {"message": "Password changed successfully!"}
 
 
 # ═══════════════════════════════════════
-# DOCUMENT UPLOAD & PROCESSING
+# DOCUMENT UPLOAD & PROCESSING (chunk + embed for real RAG)
 # ═══════════════════════════════════════
 
 @app.post("/upload")
@@ -375,26 +383,22 @@ async def upload(file: UploadFile = File(...), current_user: User = Depends(get_
         with open(path, "r", encoding="utf-8", errors="ignore") as f:
             text_content = f.read()
 
-    # Store context for RAG
-    existing_context = user_documents_context.get(current_user.username, "")
-    user_documents_context[current_user.username] = (existing_context + "\n" + text_content)[:20000]
-
     # Generate summary if we have content
     if text_content and len(text_content) > 100:
         try:
-            summary_resp = client.chat.completions.create(
-                model="llama-3.3-70b-versatile",
+            response, _key = groq_client.create_completion(
+                model="qwen/qwen3.8-27b",
                 messages=[
                     {"role": "system", "content": "Summarize this document in 3-5 bullet points. Be concise."},
                     {"role": "user", "content": text_content[:5000]}
                 ],
                 max_tokens=300
             )
-            summary = summary_resp.choices[0].message.content
-        except:
+            summary = response.choices[0].message.content
+        except Exception:
             summary = "Summary generation failed."
 
-    # Save to DB
+    # Save document record
     doc = DocumentStore(
         user_id=current_user.id,
         username=current_user.username,
@@ -405,6 +409,27 @@ async def upload(file: UploadFile = File(...), current_user: User = Depends(get_
         page_count=page_count
     )
     db.add(doc)
+    db.commit()
+    db.refresh(doc)
+
+    # ─── Real RAG indexing: chunk the FULL text (no truncation), embed, persist ───
+    chunk_count = 0
+    if text_content:
+        chunks = rag.chunk_document(text_content)
+        if chunks:
+            vectors = rag.embed_texts([c["content"] for c in chunks])
+            for i, (chunk, vector) in enumerate(zip(chunks, vectors)):
+                db.add(DocumentChunk(
+                    document_id=doc.id,
+                    user_id=current_user.id,
+                    username=current_user.username,
+                    chunk_index=i,
+                    page_number=chunk["page"],
+                    content=chunk["content"],
+                    embedding=rag.vector_to_blob(vector)
+                ))
+            chunk_count = len(chunks)
+            db.commit()
 
     # Award points
     current_user.points += 5
@@ -414,9 +439,10 @@ async def upload(file: UploadFile = File(...), current_user: User = Depends(get_
     log_analytics(db, "upload", current_user.id, current_user.username, file.filename, elapsed)
 
     result = {
-        "message": f"📄 Document '{file.filename}' processed successfully!",
+        "message": f"Document '{file.filename}' processed successfully!",
         "file_type": file_type,
         "characters_extracted": len(text_content),
+        "chunks_indexed": chunk_count,
         "points_earned": 5
     }
     if summary:
@@ -443,17 +469,17 @@ def get_documents(current_user: User = Depends(get_current_user), db: Session = 
 
 
 # ═══════════════════════════════════════
-# CHAT (with RAG + Memory + Self-Learning + Agent Mode + Streaming)
+# CHAT (real RAG retrieval + Memory + Self-Learning + Agent Mode + Streaming)
 # ═══════════════════════════════════════
 
 @app.post("/chat")
-def chat(data: dict, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+def chat(payload: ChatRequest, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     start = time.time()
-    query = data.get("message", "").strip()
+    query = payload.message.strip()
     if not query:
         raise HTTPException(400, "Message cannot be empty")
 
-    # 1. Check knowledge base first (self-learning)
+    # 1. Check curated knowledge base first (self-learning, positively-rated only)
     knowledge = find_knowledge(db, query)
     knowledge_hint = ""
     if knowledge:
@@ -461,17 +487,9 @@ def chat(data: dict, current_user: User = Depends(get_current_user), db: Session
         knowledge.times_used += 1
         db.commit()
 
-    # 2. Get document context (RAG)
-    context_text = user_documents_context.get(current_user.username, "")
-    if not context_text:
-        # Also check DB for previously uploaded docs
-        docs = db.query(DocumentStore).filter(
-            DocumentStore.username == current_user.username,
-            DocumentStore.extracted_text.isnot(None)
-        ).order_by(desc(DocumentStore.created_at)).limit(3).all()
-        if docs:
-            context_text = "\n".join([d.extracted_text[:5000] for d in docs if d.extracted_text])
-            user_documents_context[current_user.username] = context_text
+    # 2. Real RAG retrieval: top-k relevant chunks for this query, not raw-stuffed context
+    relevant_chunks = retrieve_relevant_chunks(db, current_user.username, query)
+    context_text, sources = build_document_context(relevant_chunks)
 
     # 3. Get chat history (memory)
     history_entries = db.query(ChatHistory).filter(
@@ -493,32 +511,32 @@ def chat(data: dict, current_user: User = Depends(get_current_user), db: Session
         db.add(ticket)
         db.commit()
         db.refresh(ticket)
-        agent_action = f"🎫 **Ticket #{ticket.id} created automatically** (Priority: {ticket.priority})"
+        agent_action = f"Ticket #{ticket.id} created automatically (Priority: {ticket.priority})"
 
     # 5. Build role-based system prompt
     role_prompt = get_role_prompt(current_user.role)
 
     system_prompt = f"""{role_prompt}
 
---- DOCUMENT CONTEXT (RAG) ---
-{context_text[:8000] if context_text else "No documents uploaded yet."}
+--- DOCUMENT CONTEXT (retrieved via RAG, top {len(relevant_chunks)} relevant chunks) ---
+{context_text}
 
 {knowledge_hint}
 
 IMPORTANT INSTRUCTIONS:
 - Generate a very SHORT and PRECISE answer. Avoid long paragraphs.
-- If you reference information from uploaded documents, mention which part/page it came from (e.g., "Source: Page 2")
-- If you don't have enough context, say so context but still try to help
-- Be conversational and helpful
-- For invoice-related queries, extract and present key details clearly
-- If the user reports an issue, acknowledge it empathetically
+- Only use the DOCUMENT CONTEXT above to answer document-related questions. If it says no relevant content was found, say plainly that you don't have this in the uploaded documents instead of guessing.
+- If you reference information from uploaded documents, cite the page number shown in its [Page N] label.
+- Be conversational and helpful.
+- For invoice-related queries, extract and present key details clearly.
+- If the user reports an issue, acknowledge it empathetically.
 """
 
     messages = [{"role": "system", "content": system_prompt}] + history[-6:] + [{"role": "user", "content": query}]
 
     try:
-        completion = client.chat.completions.create(
-            model="llama-3.3-70b-versatile",
+        completion, key_used = groq_client.create_completion(
+            model="qwen/qwen3.8-27b",
             messages=messages,
             max_tokens=1024,
             temperature=0.7
@@ -533,20 +551,19 @@ IMPORTANT INSTRUCTIONS:
         db.add(ChatHistory(user_id=current_user.id, username=current_user.username, role="user", content=query))
         db.add(ChatHistory(user_id=current_user.id, username=current_user.username, role="assistant", content=ai_response))
 
-        # Save to knowledge base (self-learning)
-        db.add(KnowledgeEntry(question=query, answer=ai_response))
-
         # Award points
         current_user.points += 1
         db.commit()
 
         elapsed = int((time.time() - start) * 1000)
         log_analytics(db, "chat", current_user.id, current_user.username, query[:100], elapsed)
+        log_analytics(db, "groq_key_used", current_user.id, current_user.username, key_used)
 
         return {
             "response": ai_response,
             "intent": intent,
             "from_knowledge": knowledge is not None,
+            "sources": sources,
             "response_time_ms": elapsed,
             "points": current_user.points
         }
@@ -565,7 +582,7 @@ IMPORTANT INSTRUCTIONS:
         log_analytics(db, "ai_fallback", current_user.id, current_user.username, str(e))
 
         return {
-            "response": "⚠️ I'm experiencing a temporary issue connecting to my AI engine. Don't worry — I've automatically created a support ticket for your query, and our team will get back to you shortly!",
+            "response": "I'm experiencing a temporary issue connecting to my AI engine. Don't worry — I've automatically created a support ticket for your query, and our team will get back to you shortly!",
             "intent": "fallback",
             "ticket_created": True,
             "response_time_ms": int((time.time() - start) * 1000)
@@ -573,19 +590,20 @@ IMPORTANT INSTRUCTIONS:
 
 
 @app.post("/chat/stream")
-async def chat_stream(data: dict, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+async def chat_stream(payload: ChatRequest, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     """Streaming chat endpoint - words appear gradually like ChatGPT"""
-    query = data.get("message", "").strip()
+    query = payload.message.strip()
     if not query:
         raise HTTPException(400, "Message cannot be empty")
 
-    context_text = user_documents_context.get(current_user.username, "")
+    relevant_chunks = retrieve_relevant_chunks(db, current_user.username, query)
+    context_text, sources = build_document_context(relevant_chunks)
     role_prompt = get_role_prompt(current_user.role)
 
     system_prompt = f"""{role_prompt}
---- DOCUMENT CONTEXT ---
-{context_text[:8000] if context_text else "No documents uploaded yet."}
-If you reference document info, mention the source page.
+--- DOCUMENT CONTEXT (retrieved via RAG) ---
+{context_text}
+If the context above says no relevant content was found, say so instead of guessing. If you reference document info, cite its [Page N] label.
 """
 
     # Get recent history
@@ -599,13 +617,14 @@ If you reference document info, mention the source page.
     async def generate():
         full_response = ""
         try:
-            stream = client.chat.completions.create(
-                model="llama-3.3-70b-versatile",
+            stream, key_used = groq_client.create_completion(
+                model="qwen/qwen3.8-27b",
                 messages=messages,
                 max_tokens=1024,
                 temperature=0.7,
                 stream=True
             )
+            yield f"data: {json.dumps({'sources': sources})}\n\n"
             for chunk in stream:
                 if chunk.choices[0].delta.content:
                     token = chunk.choices[0].delta.content
@@ -617,11 +636,11 @@ If you reference document info, mention the source page.
             try:
                 db2.add(ChatHistory(user_id=current_user.id, username=current_user.username, role="user", content=query))
                 db2.add(ChatHistory(user_id=current_user.id, username=current_user.username, role="assistant", content=full_response))
-                db2.add(KnowledgeEntry(question=query, answer=full_response))
                 user = db2.query(User).filter(User.id == current_user.id).first()
                 if user:
                     user.points += 1
                 db2.commit()
+                log_analytics(db2, "groq_key_used", current_user.id, current_user.username, key_used)
             finally:
                 db2.close()
 
@@ -633,14 +652,14 @@ If you reference document info, mention the source page.
 
 
 # ═══════════════════════════════════════
-# FEEDBACK (Self-Learning)
+# FEEDBACK (Self-Learning — only promotes positively-rated answers)
 # ═══════════════════════════════════════
 
 @app.post("/feedback")
-def submit_feedback(data: dict, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
-    query = data.get("query", "")
-    response = data.get("response", "")
-    is_positive = data.get("is_positive", True)
+def submit_feedback(payload: FeedbackRequest, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    query = payload.query.strip()
+    response = payload.response.strip()
+    is_positive = payload.is_positive
 
     fb = Feedback(
         user_id=current_user.id,
@@ -650,14 +669,25 @@ def submit_feedback(data: dict, current_user: User = Depends(get_current_user), 
     )
     db.add(fb)
 
-    # Update knowledge base confidence
+    # Only promote a Q&A pair into the knowledge base after positive feedback —
+    # this is what fixes the self-poisoning risk (bad answers no longer become
+    # "learned knowledge" surfaced to future users unconditionally).
     if query:
         knowledge = find_knowledge(db, query)
-        if knowledge:
-            if is_positive:
+        if is_positive:
+            if knowledge:
                 knowledge.positive_feedback += 1
                 knowledge.confidence = min(1.0, knowledge.confidence + 0.05)
-            else:
+            elif response:
+                db.add(KnowledgeEntry(
+                    question=query,
+                    answer=response,
+                    embedding=rag.vector_to_blob(rag.embed_query(query)),
+                    confidence=0.8,
+                    positive_feedback=1
+                ))
+        else:
+            if knowledge:
                 knowledge.negative_feedback += 1
                 knowledge.confidence = max(0.1, knowledge.confidence - 0.1)
 
@@ -668,7 +698,7 @@ def submit_feedback(data: dict, current_user: User = Depends(get_current_user), 
     log_analytics(db, "feedback", current_user.id, current_user.username,
                   "positive" if is_positive else "negative")
 
-    return {"message": "Thank you for your feedback! +2 points earned 🌟", "points": current_user.points}
+    return {"message": "Thank you for your feedback! +2 points earned", "points": current_user.points}
 
 
 # ═══════════════════════════════════════
@@ -700,56 +730,52 @@ def get_tickets(current_user: User = Depends(get_current_user), db: Session = De
 
 
 @app.post("/tickets")
-def create_ticket(data: dict, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
-    issue = data.get("issue", "").strip()
-    priority = data.get("priority", "Medium")
-    if not issue:
-        raise HTTPException(400, "Issue description is required")
-
+def create_ticket(payload: TicketCreateRequest, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     ticket = Ticket(
         user_id=current_user.id,
         username=current_user.username,
-        issue=issue,
-        priority=priority
+        issue=payload.issue.strip(),
+        priority=payload.priority.value
     )
     db.add(ticket)
     current_user.points += 3
     db.commit()
     db.refresh(ticket)
 
-    log_analytics(db, "ticket", current_user.id, current_user.username, issue[:100])
+    log_analytics(db, "ticket", current_user.id, current_user.username, payload.issue[:100])
 
     return {"message": f"Ticket #{ticket.id} created successfully!", "ticket_id": ticket.id, "points": current_user.points}
 
 
 @app.put("/tickets/{ticket_id}")
-def update_ticket(ticket_id: int, data: dict, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+def update_ticket(ticket_id: int, payload: TicketUpdateRequest, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     ticket = db.query(Ticket).filter(Ticket.id == ticket_id).first()
     if not ticket:
         raise HTTPException(404, "Ticket not found")
     if current_user.role not in ["admin", "developer"] and ticket.username != current_user.username:
         raise HTTPException(403, "Not authorized")
 
-    if "status" in data:
-        ticket.status = data["status"]
-    if "developer_response" in data and current_user.role == "developer":
-        ticket.developer_response = data["developer_response"]
+    if payload.status is not None:
+        ticket.status = payload.status.value
+    if payload.developer_response is not None and current_user.role == "developer":
+        ticket.developer_response = payload.developer_response
         ticket.status = "Resolved"
         ticket.developer_username = current_user.username
         ticket.resolved_at = datetime.datetime.utcnow()
         # Award points to developer
         current_user.points += 20
-        
-    if "priority" in data:
-        ticket.priority = data["priority"]
-    if "ai_response" in data:
-        ticket.ai_response = data["ai_response"]
+
+    if payload.priority is not None:
+        ticket.priority = payload.priority.value
+    if payload.ai_response is not None:
+        ticket.ai_response = payload.ai_response
 
     db.commit()
     return {"message": f"Ticket #{ticket_id} updated"}
 
+
 @app.post("/tickets/{ticket_id}/feedback")
-def rate_and_feedback_ticket(ticket_id: int, data: dict, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+def rate_and_feedback_ticket(ticket_id: int, payload: TicketFeedbackRequest, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     ticket = db.query(Ticket).filter(Ticket.id == ticket_id).first()
     if not ticket:
         raise HTTPException(404, "Ticket not found")
@@ -757,15 +783,15 @@ def rate_and_feedback_ticket(ticket_id: int, data: dict, current_user: User = De
         raise HTTPException(403, "Only the customer who raised the ticket can provide feedback")
     if ticket.status != "Resolved":
         raise HTTPException(400, "Feedback can only be provided for resolved tickets")
-        
-    ticket.rating = data.get("rating")
-    ticket.feedback_to_dev = data.get("feedback")
-    
+
+    ticket.rating = payload.rating
+    ticket.feedback_to_dev = payload.feedback
+
     # Award points to customer for feedback
     current_user.points += 5
     db.commit()
-    
-    return {"message": "Thank you for your rating and feedback! +5 points 🌟"}
+
+    return {"message": "Thank you for your rating and feedback! +5 points"}
 
 
 # ═══════════════════════════════════════
@@ -811,6 +837,12 @@ def get_analytics(current_user: User = Depends(get_current_user), db: Session = 
         func.count(AnalyticsLog.id)
     ).group_by(AnalyticsLog.action).all()
 
+    # Groq key usage split (primary vs secondary failover)
+    key_usage = db.query(
+        AnalyticsLog.detail,
+        func.count(AnalyticsLog.id)
+    ).filter(AnalyticsLog.action == "groq_key_used").group_by(AnalyticsLog.detail).all()
+
     return {
         "total_users": total_users,
         "total_chats": total_chats,
@@ -823,7 +855,8 @@ def get_analytics(current_user: User = Depends(get_current_user), db: Session = 
         "avg_response_time_ms": round(avg_time, 0),
         "top_questions": [{"question": q.question[:80], "times_used": q.times_used, "confidence": q.confidence} for q in top_questions],
         "daily_activity": [{"date": str(d[0]), "count": d[1]} for d in daily_activity],
-        "action_breakdown": {a[0]: a[1] for a in action_breakdown}
+        "action_breakdown": {a[0]: a[1] for a in action_breakdown},
+        "groq_key_usage": {k[0]: k[1] for k in key_usage}
     }
 
 
@@ -879,7 +912,6 @@ def get_chat_history(current_user: User = Depends(get_current_user), db: Session
 @app.delete("/history")
 def clear_chat_history(current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     db.query(ChatHistory).filter(ChatHistory.username == current_user.username).delete()
-    user_chat_memory.pop(current_user.username, None)
     db.commit()
     return {"message": "Chat history cleared"}
 
@@ -889,16 +921,14 @@ def clear_chat_history(current_user: User = Depends(get_current_user), db: Sessi
 # ═══════════════════════════════════════
 
 @app.post("/voice")
-def voice_query(data: dict, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+def voice_query(payload: VoiceRequest, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     """Process voice-transcribed text (transcription happens on frontend via Web Speech API)"""
-    transcript = data.get("transcript", "").strip()
-    if not transcript:
-        raise HTTPException(400, "No transcript provided")
+    transcript = payload.transcript.strip()
 
     log_analytics(db, "voice", current_user.id, current_user.username, transcript[:100])
 
     # Process as regular chat
-    return chat({"message": transcript}, current_user, db)
+    return chat(ChatRequest(message=transcript), current_user, db)
 
 
 # ═══════════════════════════════════════
@@ -921,13 +951,13 @@ def admin_get_users(current_user: User = Depends(get_current_user), db: Session 
 
 
 @app.put("/admin/users/{user_id}/role")
-def admin_update_role(user_id: int, data: dict, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+def admin_update_role(user_id: int, payload: RoleUpdateRequest, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     if current_user.role != "admin":
         raise HTTPException(403, "Admin access required")
     user = db.query(User).filter(User.id == user_id).first()
     if not user:
         raise HTTPException(404, "User not found")
-    user.role = data.get("role", user.role)
+    user.role = payload.role.value
     db.commit()
     return {"message": f"User {user.username} role updated to {user.role}"}
 
@@ -936,7 +966,9 @@ def admin_update_role(user_id: int, data: dict, current_user: User = Depends(get
 # SECURITY - Spam/Abuse Detection
 # ═══════════════════════════════════════
 
-# Simple rate limiting via in-memory tracker
+# Simple in-memory rate limiter. NOTE: resets on restart and is not shared
+# across multiple worker processes — fine for a single-worker/demo deployment,
+# swap for a Redis-backed limiter before scaling to multiple workers.
 _rate_limit = {}
 
 @app.middleware("http")

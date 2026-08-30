@@ -1,5 +1,6 @@
 .env
 app.db
+tests/test_app.db
 __pycache__/
 docs/
 uploads/

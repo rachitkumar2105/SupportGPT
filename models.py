@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Boolean, Text, DateTime, Float
+from sqlalchemy import Column, Integer, String, Boolean, Text, DateTime, Float, LargeBinary
 import datetime
 from database import Base
 
@@ -43,11 +43,14 @@ class Feedback(Base):
 
 
 class KnowledgeEntry(Base):
-    """Self-learning knowledge base - stores Q&A pairs for faster future responses"""
+    """Self-learning knowledge base - stores Q&A pairs promoted from positively
+    rated chat responses only (see /feedback). Matched via embedding similarity,
+    not unconditionally on every chat turn."""
     __tablename__ = "knowledge_base"
     id = Column(Integer, primary_key=True, index=True)
     question = Column(Text)
     answer = Column(Text)
+    embedding = Column(LargeBinary, nullable=True)
     confidence = Column(Float, default=0.8)
     times_used = Column(Integer, default=0)
     positive_feedback = Column(Integer, default=0)
@@ -88,4 +91,20 @@ class DocumentStore(Base):
     extracted_text = Column(Text, nullable=True)
     summary = Column(Text, nullable=True)
     page_count = Column(Integer, nullable=True)
+    created_at = Column(DateTime, default=datetime.datetime.utcnow)
+
+
+class DocumentChunk(Base):
+    """Chunked + embedded document text used for RAG retrieval. Embeddings are
+    persisted here (not cached in process memory) so retrieval is correct
+    across multiple workers/processes."""
+    __tablename__ = "document_chunks"
+    id = Column(Integer, primary_key=True, index=True)
+    document_id = Column(Integer, index=True)
+    user_id = Column(Integer, index=True)
+    username = Column(String, index=True)
+    chunk_index = Column(Integer)
+    page_number = Column(Integer, nullable=True)
+    content = Column(Text)
+    embedding = Column(LargeBinary)
     created_at = Column(DateTime, default=datetime.datetime.utcnow)

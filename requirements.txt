@@ -10,3 +10,8 @@ PyPDF2
 python-dotenv
 Pillow
 pytesseract
+numpy
+faiss-cpu
+fastembed
+pytest
+httpx
