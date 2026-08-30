@@ -25,8 +25,8 @@ class UserRole(str, Enum):
 
 class SignupRequest(BaseModel):
     username: str = Field(min_length=3, max_length=50)
-    password: str = Field(min_length=6)
-    email: Optional[str] = None
+    password: str = Field(min_length=6, max_length=128)
+    email: Optional[str] = Field(default=None, max_length=254)
 
     @field_validator("username")
     @classmethod
@@ -43,39 +43,39 @@ class SignupRequest(BaseModel):
 
 
 class LoginRequest(BaseModel):
-    username: str = Field(min_length=1)
-    password: str = Field(min_length=1)
+    username: str = Field(min_length=1, max_length=50)
+    password: str = Field(min_length=1, max_length=128)
 
 
 class ChangePasswordRequest(BaseModel):
-    password: str
+    password: str = Field(max_length=128)
 
 
 class ChatRequest(BaseModel):
-    message: str = Field(min_length=1)
+    message: str = Field(min_length=1, max_length=4000)
 
 
 class FeedbackRequest(BaseModel):
-    query: str = ""
-    response: str = ""
+    query: str = Field(default="", max_length=4000)
+    response: str = Field(default="", max_length=8000)
     is_positive: bool = True
 
 
 class TicketCreateRequest(BaseModel):
-    issue: str = Field(min_length=1)
+    issue: str = Field(min_length=1, max_length=5000)
     priority: TicketPriority = TicketPriority.medium
 
 
 class TicketUpdateRequest(BaseModel):
     status: Optional[TicketStatus] = None
     priority: Optional[TicketPriority] = None
-    developer_response: Optional[str] = None
-    ai_response: Optional[str] = None
+    developer_response: Optional[str] = Field(default=None, max_length=5000)
+    ai_response: Optional[str] = Field(default=None, max_length=5000)
 
 
 class TicketFeedbackRequest(BaseModel):
     rating: Optional[int] = Field(default=None, ge=1, le=5)
-    feedback: Optional[str] = None
+    feedback: Optional[str] = Field(default=None, max_length=2000)
 
 
 class RoleUpdateRequest(BaseModel):
@@ -83,4 +83,4 @@ class RoleUpdateRequest(BaseModel):
 
 
 class VoiceRequest(BaseModel):
-    transcript: str = Field(min_length=1)
+    transcript: str = Field(min_length=1, max_length=4000)

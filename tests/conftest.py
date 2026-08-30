@@ -20,9 +20,19 @@ import rag
 
 def _fake_vector(text: str) -> np.ndarray:
     """Deterministic, dependency-free stand-in for a real embedding so tests
-    don't need to download/run the ONNX embedding model."""
+    don't need to download/run the ONNX embedding model.
+
+    Uses randn (zero-mean, signed) rather than rand (uniform, all-positive) —
+    an earlier version used rand() here, which packs every fake vector into
+    the same positive orthant and gives unrelated strings a spuriously high
+    baseline cosine similarity (empirically ~0.7+, enough to spill over the
+    app's 0.75 knowledge-base match threshold by pure chance depending on
+    PYTHONHASHSEED, causing flaky test failures unrelated to app logic).
+    randn spreads fake vectors across the full sphere, matching how a real
+    embedding model separates unrelated text.
+    """
     rng = np.random.RandomState(abs(hash(text)) % (2 ** 32))
-    vector = rng.rand(rag.EMBEDDING_DIM).astype("float32")
+    vector = rng.randn(rag.EMBEDDING_DIM).astype("float32")
     return vector / np.linalg.norm(vector)
 
 

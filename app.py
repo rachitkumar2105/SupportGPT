@@ -1,4 +1,5 @@
 import os
+import re
 import time
 import json
 import shutil
@@ -14,7 +15,7 @@ from fastapi.responses import StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from sqlalchemy.orm import Session
 from sqlalchemy import func, desc
-from database import SessionLocal, engine, Base
+from database import SessionLocal, engine, Base, run_lightweight_migrations
 from models import (
     User, Ticket, Feedback, KnowledgeEntry,
     AnalyticsLog, ChatHistory, DocumentStore, DocumentChunk
@@ -28,12 +29,14 @@ import rag
 from groq_client import groq_client
 import bcrypt
 from jose import jwt, JWTError
-import PyPDF2
+from pypdf import PdfReader
 
 app = FastAPI(title="SupportGPT", version="3.0")
 
-# Create all tables
+# Create all tables, then patch any columns added to existing tables since
+# the DB was first created (see run_lightweight_migrations docstring).
 Base.metadata.create_all(bind=engine)
+run_lightweight_migrations()
 
 
 # ─── Secrets & config ───
@@ -55,6 +58,12 @@ ALLOWED_ORIGINS = [
     ).split(",")
     if origin.strip()
 ]
+if "*" in ALLOWED_ORIGINS:
+    raise RuntimeError(
+        "ALLOWED_ORIGINS cannot include '*' — this app sends allow_credentials=True, "
+        "and '*' combined with credentials is invalid per the CORS spec and a real "
+        "security hole. List explicit origins instead."
+    )
 
 
 def hash_password(password: str) -> str:
@@ -201,13 +210,46 @@ def extract_text_from_pdf(filepath: str) -> tuple:
     text_content = ""
     page_count = 0
     with open(filepath, "rb") as f:
-        reader = PyPDF2.PdfReader(f)
+        reader = PdfReader(f)
         page_count = len(reader.pages)
         for i, page in enumerate(reader.pages):
             page_text = page.extract_text()
             if page_text:
                 text_content += f"\n--- Page {i+1} ---\n{page_text}"
     return text_content, page_count
+
+
+MAX_UPLOAD_BYTES = 10 * 1024 * 1024  # 10 MB
+
+
+def safe_filename(filename: str) -> str:
+    """Strip any path components and disallowed characters so a filename
+    like '../../etc/passwd' or '..\\..\\secrets.txt' can't escape the docs/
+    directory. os.path.basename() alone isn't enough here: on POSIX it
+    doesn't treat a backslash as a separator, so a Windows-style traversal
+    string would pass through unmodified."""
+    name = filename.replace("\\", "/").split("/")[-1]
+    name = name.lstrip(".")
+    name = re.sub(r"[^A-Za-z0-9_.-]", "_", name)
+    return name or "upload"
+
+
+def save_upload_capped(file_obj, dest_path: str, max_bytes: int) -> int:
+    """Stream-copy an upload to disk, aborting once max_bytes is exceeded
+    instead of buffering an unbounded file into memory/disk first."""
+    written = 0
+    with open(dest_path, "wb") as out:
+        while True:
+            chunk = file_obj.read(1024 * 1024)
+            if not chunk:
+                break
+            written += len(chunk)
+            if written > max_bytes:
+                out.close()
+                os.remove(dest_path)
+                raise HTTPException(413, f"File too large. Maximum upload size is {max_bytes // (1024 * 1024)} MB.")
+            out.write(chunk)
+    return written
 
 
 def retrieve_relevant_chunks(db: Session, username: str, query: str, k: int = 5):
@@ -323,7 +365,6 @@ def get_me(current_user: User = Depends(get_current_user)):
 @app.post("/change-password")
 def change_password(payload: ChangePasswordRequest, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     new_password = payload.password.strip()
-    import re
     if len(new_password) < 6 or not re.search(r"[A-Z]", new_password) or not re.search(r"[a-z]", new_password) or not re.search(r"\d", new_password) or not re.search(r"[!@#$%^&*(),.?\":{}|<>]", new_password):
         raise HTTPException(400, "Password must be at least 6 characters, include one uppercase, one lowercase, one digit, and one special symbol")
 
@@ -340,22 +381,26 @@ def change_password(payload: ChangePasswordRequest, current_user: User = Depends
 async def upload(file: UploadFile = File(...), current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     start = time.time()
 
-    # Determine file type
-    filename = file.filename.lower()
+    if not file.filename:
+        raise HTTPException(400, "A filename is required.")
+
+    # Determine file type from the ORIGINAL name (extension only)
+    lower_name = file.filename.lower()
     file_type = "unknown"
-    if filename.endswith(".pdf"):
+    if lower_name.endswith(".pdf"):
         file_type = "pdf"
-    elif filename.endswith((".png", ".jpg", ".jpeg", ".gif", ".bmp", ".webp")):
+    elif lower_name.endswith((".png", ".jpg", ".jpeg", ".gif", ".bmp", ".webp")):
         file_type = "image"
-    elif filename.endswith((".txt", ".md", ".csv")):
+    elif lower_name.endswith((".txt", ".md", ".csv")):
         file_type = "text"
     else:
         raise HTTPException(400, "Unsupported file type. Please upload PDF, images, or text files.")
 
-    # Save file
-    path = f"docs/{current_user.username}_{file.filename}"
-    with open(path, "wb") as f:
-        shutil.copyfileobj(file.file, f)
+    # Sanitize before using it in a filesystem path — a raw filename like
+    # "../../etc/passwd" would otherwise let an upload escape docs/.
+    clean_filename = safe_filename(file.filename)
+    path = f"docs/{current_user.username}_{clean_filename}"
+    save_upload_capped(file.file, path, MAX_UPLOAD_BYTES)
 
     text_content = ""
     page_count = None
@@ -365,7 +410,8 @@ async def upload(file: UploadFile = File(...), current_user: User = Depends(get_
         try:
             text_content, page_count = extract_text_from_pdf(path)
         except Exception as e:
-            raise HTTPException(500, f"Failed to process PDF: {str(e)}")
+            print(f"PDF processing error for {clean_filename}: {e}")
+            raise HTTPException(500, "Failed to process this PDF. It may be corrupted, encrypted, or not a valid PDF file.")
 
     elif file_type == "image":
         # Try OCR with Pillow + pytesseract
@@ -402,7 +448,7 @@ async def upload(file: UploadFile = File(...), current_user: User = Depends(get_
     doc = DocumentStore(
         user_id=current_user.id,
         username=current_user.username,
-        filename=file.filename,
+        filename=clean_filename,
         file_type=file_type,
         extracted_text=text_content[:10000] if text_content else None,
         summary=summary,
@@ -436,10 +482,10 @@ async def upload(file: UploadFile = File(...), current_user: User = Depends(get_
     db.commit()
 
     elapsed = int((time.time() - start) * 1000)
-    log_analytics(db, "upload", current_user.id, current_user.username, file.filename, elapsed)
+    log_analytics(db, "upload", current_user.id, current_user.username, clean_filename, elapsed)
 
     result = {
-        "message": f"Document '{file.filename}' processed successfully!",
+        "message": f"Document '{clean_filename}' processed successfully!",
         "file_type": file_type,
         "characters_extracted": len(text_content),
         "chunks_indexed": chunk_count,
@@ -646,7 +692,8 @@ If the context above says no relevant content was found, say so instead of guess
 
             yield f"data: {json.dumps({'done': True})}\n\n"
         except Exception as e:
-            yield f"data: {json.dumps({'error': str(e)})}\n\n"
+            print(f"Groq stream error: {e}")
+            yield f"data: {json.dumps({'error': 'AI engine is temporarily unavailable. Please try again.'})}\n\n"
 
     return StreamingResponse(generate(), media_type="text/event-stream")
 
@@ -671,14 +718,24 @@ def submit_feedback(payload: FeedbackRequest, current_user: User = Depends(get_c
 
     # Only promote a Q&A pair into the knowledge base after positive feedback —
     # this is what fixes the self-poisoning risk (bad answers no longer become
-    # "learned knowledge" surfaced to future users unconditionally).
+    # "learned knowledge" surfaced to future users unconditionally). The
+    # request body is client-supplied, though, so also require that `response`
+    # matches something this user's account actually received from the AI —
+    # otherwise a client could submit is_positive=True with a fabricated
+    # response and get arbitrary text promoted into the shared knowledge base.
+    response_is_real = response and db.query(ChatHistory).filter(
+        ChatHistory.username == current_user.username,
+        ChatHistory.role == "assistant",
+        ChatHistory.content == response
+    ).first() is not None
+
     if query:
         knowledge = find_knowledge(db, query)
         if is_positive:
             if knowledge:
                 knowledge.positive_feedback += 1
                 knowledge.confidence = min(1.0, knowledge.confidence + 0.05)
-            elif response:
+            elif response_is_real:
                 db.add(KnowledgeEntry(
                     question=query,
                     answer=response,
@@ -752,8 +809,16 @@ def update_ticket(ticket_id: int, payload: TicketUpdateRequest, current_user: Us
     ticket = db.query(Ticket).filter(Ticket.id == ticket_id).first()
     if not ticket:
         raise HTTPException(404, "Ticket not found")
-    if current_user.role not in ["admin", "developer"] and ticket.username != current_user.username:
+    is_staff = current_user.role in ["admin", "developer"]
+    if not is_staff and ticket.username != current_user.username:
         raise HTTPException(403, "Not authorized")
+
+    # status/priority/ai_response drive the support workflow (resolution,
+    # triage, AI-agent notes) and are staff-only — a ticket's owner passing
+    # the check above (it's their own ticket) must not be able to set these
+    # directly, e.g. self-marking a ticket "Resolved" or escalating priority.
+    if not is_staff and (payload.status is not None or payload.priority is not None or payload.ai_response is not None):
+        raise HTTPException(403, "Only admin/developer accounts can change ticket status, priority, or AI notes")
 
     if payload.status is not None:
         ticket.status = payload.status.value

@@ -10,6 +10,7 @@ request rebuilds a small FAISS index on the fly from the DB rows for that
 user, instead of relying on worker-local state.
 """
 import re
+import threading
 import numpy as np
 import faiss
 
@@ -19,14 +20,21 @@ CHUNK_OVERLAP = 100
 RELEVANCE_THRESHOLD = 0.3  # cosine similarity below this = "not relevant enough"
 
 _embedder = None
+_embedder_lock = threading.Lock()
 _PAGE_MARKER = re.compile(r"--- Page (\d+) ---")
 
 
 def _get_embedder():
+    # FastAPI's sync endpoints run in a threadpool, so concurrent first
+    # requests could otherwise race here and construct/load the ONNX model
+    # more than once. Double-checked locking avoids that without paying for
+    # a lock on every call once the singleton is warm.
     global _embedder
     if _embedder is None:
-        from fastembed import TextEmbedding
-        _embedder = TextEmbedding(model_name="BAAI/bge-small-en-v1.5")
+        with _embedder_lock:
+            if _embedder is None:
+                from fastembed import TextEmbedding
+                _embedder = TextEmbedding(model_name="BAAI/bge-small-en-v1.5")
     return _embedder
 
 
