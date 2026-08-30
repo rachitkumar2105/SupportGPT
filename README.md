@@ -18,7 +18,7 @@ An AI-powered support-ops platform: users upload documents, an actual RAG pipeli
 ### ✅ Core Features
 - **User Authentication**: Secure Login & Signup flow, JWT-based sessions, admin/developer/customer roles.
 - **Dashboard UI**: Clean and intuitive interface for document management, chat, and tickets.
-- **Document Upload**: PDF (PyPDF2), image (pytesseract OCR), and text/markdown/CSV.
+- **Document Upload**: PDF (`pypdf`), image (pytesseract OCR), and text/markdown/CSV — capped at 10 MB, filenames sanitized against path traversal.
 - **Real RAG**: Documents are chunked (with page tracking), embedded locally, and retrieved via top-k FAISS similarity search per query — not raw text stuffed into the prompt. See [Architecture](#-architecture) below.
 - **Chat System**: Persistent per-user chat history, streaming responses (SSE), role-based AI personas.
 - **Curated self-learning knowledge base**: Only Q&A pairs that receive positive feedback are promoted into the knowledge base (matched via embedding similarity), so a bad answer can't poison future responses.
@@ -118,9 +118,14 @@ Building this system involved tackling real-world engineering challenges:
 
 - No hardcoded/auto-reset admin credentials — demo accounts only seed when `SEED_DEMO_USERS=true`, and only if they don't already exist.
 - `SECRET_KEY` has no insecure fallback; startup fails loudly if it's missing.
-- CORS origins are explicit (`ALLOWED_ORIGINS`), not `*`, since credentials are allowed.
-- All request bodies are Pydantic-validated, including enum-checked ticket `status`/`priority`.
+- CORS origins are explicit (`ALLOWED_ORIGINS`), not `*` — the app refuses to start if `*` is set, since credentials are allowed and that combination is invalid/vulnerable.
+- All request bodies are Pydantic-validated, including enum-checked ticket `status`/`priority` and `max_length` caps on free-text fields.
+- Upload filenames are sanitized against path traversal; uploads are capped at 10 MB.
+- Ticket `status`/`priority`/`ai_response` can only be changed by admin/developer accounts, even on a ticket the requester owns.
+- `/feedback` only promotes a Q&A pair into the knowledge base if the response actually matches something the user's account received from the AI — not just whatever the client submits.
 - Groq API keys are never logged or exposed in responses — only which key (`primary`/`secondary`) served a request is recorded, for the analytics dashboard.
+- A lightweight startup migration (`database.py`) patches columns added to existing tables — `Base.metadata.create_all()` alone does not do this, and skipping it would crash the app against any pre-existing `app.db`.
+- See [`AUDIT_REPORT.md`](AUDIT_REPORT.md) for the full independent security audit: what was verified, what was found and fixed, and known limitations (e.g. an `ecdsa` transitive-dependency CVE with no upstream fix, unreachable since this app only uses JWT `HS256`).
 
 ---
 
@@ -131,4 +136,6 @@ Building this system involved tackling real-world engineering challenges:
 - [ ] **Hybrid retrieval**: BM25 + vector search with reranking, for exact-term queries (invoice numbers, order IDs).
 - [ ] **Evaluation harness**: A small labeled eval set with a retrieval-precision/faithfulness metric.
 - [ ] **Redis-backed rate limiting**: Current limiter is in-memory and per-process — fine for a single worker, not for scaling out.
+- [ ] **Real migrations (Alembic)**: The current lightweight startup migration only adds missing nullable columns — it can't handle renames, type changes, or backfills.
+- [ ] **Typed response models**: Every endpoint validates its request body via Pydantic, but responses are still plain dicts, not `response_model`-declared.
 - [ ] **Production Deployment**: Containerize and deploy the app to scalable platforms like Render (Backend) and Vercel (Frontend).
