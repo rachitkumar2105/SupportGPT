@@ -387,7 +387,7 @@ async def upload(file: UploadFile = File(...), current_user: User = Depends(get_
     if text_content and len(text_content) > 100:
         try:
             response, _key = groq_client.create_completion(
-                model="qwen/qwen3.8-27b",
+                model="openai/gpt-oss-120b",
                 messages=[
                     {"role": "system", "content": "Summarize this document in 3-5 bullet points. Be concise."},
                     {"role": "user", "content": text_content[:5000]}
@@ -536,7 +536,7 @@ IMPORTANT INSTRUCTIONS:
 
     try:
         completion, key_used = groq_client.create_completion(
-            model="qwen/qwen3.8-27b",
+            model="openai/gpt-oss-120b",
             messages=messages,
             max_tokens=1024,
             temperature=0.7
@@ -618,7 +618,7 @@ If the context above says no relevant content was found, say so instead of guess
         full_response = ""
         try:
             stream, key_used = groq_client.create_completion(
-                model="qwen/qwen3.8-27b",
+                model="openai/gpt-oss-120b",
                 messages=messages,
                 max_tokens=1024,
                 temperature=0.7,

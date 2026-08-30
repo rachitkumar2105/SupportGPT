@@ -27,6 +27,7 @@ An AI-powered support-ops platform: users upload documents, an actual RAG pipeli
 - **Analytics dashboard**: Admin-only — usage, response times, top questions, daily activity, Groq primary/secondary key usage.
 
 ### 💎 Advanced Engineering
+- **LLM**: [`openai/gpt-oss-120b`](https://console.groq.com/docs/models) via Groq — verified directly against `client.models.list()`, not assumed. It's a reasoning model but keeps chain-of-thought in a separate `reasoning` field, so `message.content` stays clean and non-empty (unlike some other currently-listed models, which leak a raw `<think>` block into the visible answer).
 - **Dual-key Groq failover**: Every LLM call goes through a single wrapper (`groq_client.py`) that automatically retries on the secondary key when the primary hits a rate limit/quota error.
 - **Local, torch-free embeddings**: Uses `fastembed` (ONNX runtime) instead of `sentence-transformers`, deliberately avoiding the torch/torchvision ABI conflicts this project hit previously (see Challenges Overcome).
 - **Multi-worker-safe retrieval**: No in-memory context cache — chunk embeddings are persisted in SQLite and retrieval is recomputed per request, so behavior is consistent regardless of which worker handles a request.
@@ -93,7 +94,7 @@ Building this system involved tackling real-world engineering challenges:
 - Debugging file upload and multipart form data failures between vanilla JS and FastAPI.
 - Establishing seamless frontend to backend communication via REST APIs.
 - Remedying underlying `Torch`/`torchvision` ABI and local DLL environment issues — this recurred when adding real embeddings (`sentence-transformers` pulls in the same broken torch/torchvision stack), so the RAG pipeline uses `fastembed` (ONNX runtime) instead, which has no torch dependency at all.
-- A Groq model (`llama-3.3-70b-versatile`) was retired between when this project was first built and this update — swapped to a currently-supported model (`qwen/qwen3.8-27b`) as part of hardening the LLM integration.
+- A Groq model (`llama-3.3-70b-versatile`) was deprecated between when this project was first built and this update. Rather than guess a replacement from memory, the fix queries `client.models.list()` live and checks the returned IDs directly — confirmed `openai/gpt-oss-120b` returns clean, coherent, non-empty answers (`finish_reason: stop`) under the app's real system prompt and RAG context, while `qwen/qwen3.6-27b` — the other documented replacement — leaks its chain-of-thought straight into `message.content` as a raw `<think>` block, which isn't usable without extra parsing.
 
 ---
 
