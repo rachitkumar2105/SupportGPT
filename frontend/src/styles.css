@@ -170,6 +170,12 @@ a {
 .btn:hover {
   border-color: var(--ink-3);
 }
+/* Links styled as buttons keep the button's text colour, not the link colour. */
+a.btn,
+a.btn:visited,
+:root[data-theme="dark"] a.btn {
+  color: var(--fg);
+}
 .btn:active {
   transform: translateY(1px);
 }
