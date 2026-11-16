@@ -3,23 +3,29 @@
    Bricolage Grotesque carries headings; Atkinson Hyperlegible (designed for legibility) carries everything users read. */
 
 :root {
-  --ground: #eef2f1;
+  /* 60% ground, 30% brand blue, 10% cyan accent (primary actions only). Amber and red are status colours. */
+  --ground: #f8fafc;
   --panel: #ffffff;
-  --panel-2: #f6f9f8;
-  --ink: #14231f;
-  --ink-2: #4a5c57;
-  --ink-3: #6f817c;
-  --line: #cbd6d3;
-  --line-2: #dfe7e5;
-  --switch: #0e6b5c;
-  --switch-ink: #0a5247;
-  --switch-soft: #d7ebe6;
+  --panel-2: #f1f5f9;
+  --ink: #0f172a;
+  --ink-2: #475569;
+  --ink-3: #64748b;
+  --line: #cbd5e1;
+  --line-2: #e2e8f0;
+  --switch: #2563eb;
+  --switch-ink: #1e3a8a;
+  --switch-soft: #dbeafe;
+  --brand-deep: #1e3a8a;
+  --accent: #06b6d4;
+  --accent-ink: #083344;
+  --accent-soft: #cffafe;
   --lamp: #f2a93b;
-  --lamp-soft: #fcefd8;
+  --lamp-soft: #fdf1dc;
   --lamp-ink: #8a5300;
-  --cable: #d2463c;
-  --cable-soft: #f8dedb;
-  --focus: #1b7fd1;
+  --cable: #dc2626;
+  --cable-soft: #fee2e2;
+  --focus: #2563eb;
+  --on-brand: #ffffff;
 
   --display: "Bricolage Grotesque Variable", "Segoe UI", system-ui, sans-serif;
   --text: "Atkinson Hyperlegible", "Segoe UI", system-ui, sans-serif;
@@ -35,23 +41,28 @@
 }
 
 :root[data-theme="dark"] {
-  --ground: #0e1715;
-  --panel: #15211e;
-  --panel-2: #1a2825;
-  --ink: #e4ece9;
-  --ink-2: #a9bbb6;
-  --ink-3: #82958f;
-  --line: #2c3d39;
-  --line-2: #22312e;
-  --switch: #46c2a6;
-  --switch-ink: #7ad8c3;
-  --switch-soft: #173a33;
+  --ground: #0b1220;
+  --panel: #111a2e;
+  --panel-2: #0f1729;
+  --ink: #e2e8f0;
+  --ink-2: #a3b2c7;
+  --ink-3: #8394ab;
+  --line: #24324d;
+  --line-2: #1a2540;
+  --switch: #60a5fa;
+  --switch-ink: #93c5fd;
+  --switch-soft: #172554;
+  --brand-deep: #172554;
+  --accent: #22d3ee;
+  --accent-ink: #052e36;
+  --accent-soft: #0e3a46;
   --lamp: #f5b851;
   --lamp-soft: #3a2e17;
   --lamp-ink: #f5c979;
-  --cable: #f06b5f;
-  --cable-soft: #3d1f1c;
-  --focus: #6cb6ff;
+  --cable: #f87171;
+  --cable-soft: #3b1a1a;
+  --focus: #93c5fd;
+  --on-brand: #0b1220;
   color-scheme: dark;
 }
 
@@ -184,16 +195,13 @@ a.btn:visited,
   cursor: not-allowed;
 }
 .btn.primary {
-  --bg: var(--switch);
-  --fg: #fff;
-  --bd: var(--switch);
-  box-shadow: inset 0 -2px 0 rgb(0 0 0 / 0.18);
-}
-:root[data-theme="dark"] .btn.primary {
-  --fg: #06231d;
+  --bg: var(--accent);
+  --fg: var(--accent-ink);
+  --bd: var(--accent);
+  box-shadow: inset 0 -2px 0 rgb(0 0 0 / 0.14);
 }
 .btn.primary:hover {
-  box-shadow: inset 0 -2px 0 rgb(0 0 0 / 0.18), 0 0 0 3px var(--switch-soft);
+  box-shadow: inset 0 -2px 0 rgb(0 0 0 / 0.14), 0 0 0 3px var(--accent-soft);
 }
 .btn.lamp {
   --bg: var(--lamp);
@@ -627,14 +635,11 @@ textarea {
   justify-self: end;
   max-width: min(78%, 560px);
   background: var(--switch);
-  color: #fff;
+  color: var(--on-brand);
   padding: 10px 14px;
   border-radius: 16px 16px 4px 16px;
   white-space: pre-wrap;
   overflow-wrap: anywhere;
-}
-:root[data-theme="dark"] .bubble-user {
-  color: #06231d;
 }
 .answer {
   display: grid;
@@ -672,7 +677,7 @@ textarea {
 .cite:hover,
 .cite.on {
   background: var(--switch);
-  color: #fff;
+  color: var(--on-brand);
 }
 .caret {
   display: inline-block;
@@ -1166,7 +1171,7 @@ details.transcript .inner {
 }
 .stars button[aria-pressed="true"] {
   background: var(--switch);
-  color: #fff;
+  color: var(--on-brand);
   border-color: var(--switch);
 }
 
@@ -1267,8 +1272,8 @@ details.transcript .inner {
   grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
 }
 .auth-side {
-  background: var(--switch);
-  color: #eaf7f3;
+  background: var(--brand-deep);
+  color: #e0e7ff;
   padding: clamp(24px, 5vw, 64px);
   display: flex;
   flex-direction: column;
@@ -1278,11 +1283,15 @@ details.transcript .inner {
   overflow: hidden;
 }
 :root[data-theme="dark"] .auth-side {
-  background: #0d3d34;
+  background: #0f1d4a;
 }
 .auth-side .brand {
   color: #fff;
   padding: 0;
+}
+.auth-side .logo-mark {
+  border-radius: 7px;
+  box-shadow: 0 0 0 1.5px rgb(255 255 255 / 0.45);
 }
 .auth-side blockquote {
   margin: 0;
@@ -1292,7 +1301,7 @@ details.transcript .inner {
 }
 .auth-side p {
   max-width: 42ch;
-  color: #cfe9e2;
+  color: #c7d2fe;
 }
 .auth-form-wrap {
   display: grid;
@@ -1388,13 +1397,10 @@ details.transcript .inner {
   justify-self: end;
   max-width: 82%;
   background: var(--switch);
-  color: #fff;
+  color: var(--on-brand);
   padding: 10px 14px;
   border-radius: 16px 16px 4px 16px;
   font-size: 0.95rem;
-}
-:root[data-theme="dark"] .board-q {
-  color: #06231d;
 }
 .board-jacks {
   display: grid;
@@ -1645,6 +1651,7 @@ details.transcript .inner {
   }
   .auth {
     grid-template-columns: 1fr;
+    grid-template-rows: auto 1fr;
   }
   .auth-side {
     padding: 20px;

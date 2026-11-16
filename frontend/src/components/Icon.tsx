@@ -63,10 +63,10 @@ export function Icon({ name, size = 20, className, title }: { name: IconName; si
 export function Logo({ size = 28 }: { size?: number }) {
   return (
     <svg width={size} height={size} viewBox="0 0 32 32" aria-hidden="true" className="logo-mark">
-      <rect width="32" height="32" rx="7" fill="var(--switch)" />
-      <circle cx="10" cy="11" r="3.2" fill="var(--ground)" />
-      <circle cx="22" cy="21" r="3.2" fill="var(--lamp)" />
-      <path d="M10 14.5c0 6 12 1 12 3" fill="none" stroke="var(--ground)" strokeWidth="2.2" strokeLinecap="round" />
+      <rect width="32" height="32" rx="7" fill="#1E3A8A" />
+      <circle cx="10" cy="11" r="3.2" fill="#F8FAFC" />
+      <circle cx="22" cy="21" r="3.2" fill="#06B6D4" />
+      <path d="M10 14.5c0 6 12 1 12 3" fill="none" stroke="#F8FAFC" strokeWidth="2.2" strokeLinecap="round" />
     </svg>
   );
 }
