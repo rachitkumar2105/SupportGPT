@@ -80,7 +80,7 @@ jobs:
           git config --global user.email "ci@users.noreply.github.com"
           git config --global user.name "SupportGPT CI"
           git clone --depth 1 "https://rachitkumar2105:${HF_TOKEN}@huggingface.co/spaces/${SPACE}" space
-          rsync -a --delete --exclude .git --exclude .gitattributes --exclude tests --exclude '.env*' --exclude '*.db' \
+          rsync -a --checksum --delete --exclude .git --exclude .gitattributes --exclude tests --exclude '.env*' --exclude '*.db' \
             --exclude __pycache__ --exclude .pytest_cache --exclude .ruff_cache backend/ space/
           cd space
           git add -A
