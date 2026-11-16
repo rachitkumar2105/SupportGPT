@@ -1,0 +1,17 @@
+# Runtime dependencies (pinned; audited with pip-audit in CI)
+fastapi==0.163.1
+starlette==1.10.0
+uvicorn[standard]==0.54.0
+pydantic==2.13.5
+python-dotenv==1.2.4
+email-validator==2.4.0
+python-multipart==0.0.32
+sqlalchemy==2.1.8
+alembic==1.20.1
+psycopg[binary]==3.3.9
+pyjwt==2.15.0
+argon2-cffi==25.1.0
+groq==1.7.0
+pypdf==7.1.0
+numpy==2.5.3
+fastembed==0.9.1

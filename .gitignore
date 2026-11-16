@@ -1,7 +1,20 @@
+# env & secrets
 .env
-app.db
-tests/test_app.db
+.env.*
+!.env.example
+# python
 __pycache__/
-docs/
-uploads/
-*.pdf
+*.pyc
+.pytest_cache/
+.ruff_cache/
+.coverage
+*.db
+*.db-wal
+*.db-shm
+# node
+node_modules/
+frontend/dist/
+# misc
+.DS_Store
+.vercel
+*.tsbuildinfo

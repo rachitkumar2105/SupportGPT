@@ -1,7 +1,0 @@
-*.py
-requirements.txt
-Dockerfile
-.env
-app.db
-docs/
-uploads/
