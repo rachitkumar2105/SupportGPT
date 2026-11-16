@@ -42,7 +42,7 @@ flowchart LR
   one-paragraph overlap, and embeds `"Doc title > Section\ncontent"` so short passages stay retrievable.
 * **Hybrid retrieval**: vectors catch paraphrases ("get my money back"), BM25 catches exact tokens ("E-402", "Team plan").
   The index is rebuilt in memory only when a `kb_state.version` row changes, so it is consistent across restarts.
-* **Two refusal gates**: a calibrated retrieval-confidence threshold (the model is not called at all), and a model-level
+* **Two refusal gates**: a retrieval-confidence threshold calibrated on the live sweep (the model is not called at all), and a model-level
   `[[NO_ANSWER]]` sentinel detected while streaming before any text reaches the customer.
 * **Model resilience**: a 429/quota error on the primary Groq key retries on the secondary key; a decommissioned model
   falls through to the next configured model; auth errors don't fail over. Which key and model served each answer is
@@ -55,7 +55,34 @@ BM25 can't win on copy-paste) and 14 out of scope, including a prompt-injection 
 the live index without calling the LLM and reports hit@1/3/5 and MRR for hybrid, dense-only and BM25-only, plus refusal
 precision/recall and a threshold sweep. It runs automatically on boot and on demand from **Answer quality**.
 
-<!-- EVAL-RESULTS -->
+**Measured on the live deployment (16 Nov 2026, 47 passages, bge-small-en-v1.5, gpt-oss-120b):**
+
+Retrieval (right article for the 54 answerable questions):
+
+| Ranker | Top 1 | Top 3 | Top 5 | MRR |
+| --- | --- | --- | --- | --- |
+| Hybrid (RRF, used for answers) | 87.0% | 100% | 100% | 0.932 |
+| Vectors only | 90.7% | 98.1% | 98.1% | 0.944 |
+| BM25 only | 72.2% | 85.2% | 96.3% | 0.811 |
+
+Hybrid is slightly *worse* than vectors alone at top 1 on this set but is the only ranker that puts the right article
+in the top 3 every time, which is what matters when the model reads the top 5. The gap at top 1 comes from plain-RRF
+weighting BM25 equally; a weighted fusion is the obvious next experiment, tuned on a separate split rather than this set.
+
+Refusal. With bge-small, best-match cosine has a median of 0.72 for answerable questions and 0.62 for out-of-scope
+ones, so a retrieval threshold alone can't separate them: at 0.70 it would wrongly refuse 39% of answerable questions.
+The threshold is therefore set to **0.57**, the highest value that wrongly refuses at most 5% on the sweep (1.9%), and
+the model's `NO_ANSWER` check does the rest. End-to-end through the real chat endpoint
+(`backend/scripts/e2e_answer_check.py`, one run, temperature 0.2):
+
+| | Result |
+| --- | --- |
+| Out-of-scope questions declined | **14 / 14** (6 by the retrieval gate, 8 by the model), including the prompt-injection attempt |
+| Answerable questions wrongly declined | **2 / 54 (3.7%)**: one below the retrieval threshold (0.545), one declined by the model ("yearly price for the individual paid tier") |
+| Time to full streamed answer | p50 844 ms, p95 1.14 s (through Vercel to the Space) |
+| Retrieval only (embed + search) | p95 107 ms on the free 2-vCPU Space |
+
+These are small hand-written sets on a nine-article help center; treat them as a regression signal, not a benchmark.
 
 ## Security
 
@@ -74,7 +101,7 @@ precision/recall and a threshold sweep. It runs automatically on boot and on dem
 
 Backend: Python 3.12, FastAPI, SQLAlchemy 2, Alembic, fastembed (ONNX, no torch), NumPy, Groq, PyJWT, argon2-cffi, pypdf.
 Frontend: React 18, TypeScript, Vite, React Router 7, hand-written CSS and SVG icons (no UI kit).
-Infra: Docker on Hugging Face Spaces, Vercel, GitHub Actions (lint, 49 tests at ~93% coverage, audits, deploy).
+Infra: Docker on Hugging Face Spaces, Vercel, GitHub Actions (lint, 51 tests at 92% coverage, audits, deploy).
 
 ## Run locally
 
