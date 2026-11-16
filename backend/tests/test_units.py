@@ -101,3 +101,11 @@ def test_missing_key_raises_unavailable_not_crash(monkeypatch):
     object.__setattr__(s, "groq_primary", "")
     with pytest.raises(LLMUnavailable):
         g.complete([], ["m1"])
+
+
+def test_citation_normalisation():
+    from app.services.assistant import normalize_citations, strip_unknown_citations
+
+    assert normalize_citations("Yes 【1】 and 【2†L3-L5】.") == "Yes [1] and [2]."
+    assert normalize_citations("See [1, 3].") == "See [1][3]."
+    assert strip_unknown_citations(normalize_citations("A 【7】 B [2]"), 3) == "A  B [2]"

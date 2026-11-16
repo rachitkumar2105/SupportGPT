@@ -16,7 +16,7 @@ interface Metrics {
   n_answerable: number;
   n_out_of_scope: number;
   retrieval: Record<Mode, { "hit@1": number; "hit@3": number; "hit@5": number; mrr: number }>;
-  abstention: { current: Abst; best: Abst; sweep: Abst[] };
+  abstention: { current: Abst; best: Abst; recommended?: Abst | null; max_false_refusal?: number; sweep: Abst[] };
   confidence: { answerable_median: number | null; out_of_scope_median: number | null };
   latency_ms: { mean: number | null; p95: number | null };
   hybrid_misses: { q: string; expected: string; got: string[]; rank: number | null }[];
@@ -194,8 +194,13 @@ export default function Quality() {
             <h2 style={{ fontSize: "1.2rem" }}>Choosing the refusal threshold</h2>
             <p className="muted" style={{ maxWidth: "70ch" }}>
               Median best-match score is {m.confidence.answerable_median?.toFixed(3)} for answerable questions and{" "}
-              {m.confidence.out_of_scope_median?.toFixed(3)} for out-of-scope ones. The best balanced threshold on this set is{" "}
-              {m.abstention.best.threshold.toFixed(2)} ({pct(m.abstention.best.balanced_accuracy, 1)} balanced accuracy).
+              {m.confidence.out_of_scope_median?.toFixed(3)} for out-of-scope ones, so this gate alone can't separate them
+              cleanly. It is used as a coarse first filter, and the model's own "not in the excerpts" check is the backstop.{" "}
+              {m.abstention.recommended
+                ? `The recommended threshold is ${m.abstention.recommended.threshold.toFixed(2)}: it declines ${pct(m.abstention.recommended.recall)} of out-of-scope questions while wrongly declining ${pct(m.abstention.recommended.false_refusal_rate, 1)} of answerable ones (limit ${pct(m.abstention.max_false_refusal ?? 0.1)}).`
+                : ""}{" "}
+              The best balanced-accuracy threshold would be {m.abstention.best.threshold.toFixed(2)}, at the cost of declining{" "}
+              {pct(m.abstention.best.false_refusal_rate)} of answerable questions.
             </p>
             <div className="panel" style={{ padding: 16 }}>
               <Sweep sweep={m.abstention.sweep} current={m.abstention.current.threshold} />

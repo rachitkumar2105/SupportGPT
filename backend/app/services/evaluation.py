@@ -21,6 +21,7 @@ from sqlalchemy.orm import Session
 from ..config import get_settings
 from . import rag
 
+MAX_FALSE_REFUSAL = 0.10
 GOLDEN = Path(__file__).resolve().parent.parent / "seed" / "golden.jsonl"
 
 
@@ -85,12 +86,23 @@ def run_eval(db: Session) -> dict:
 
     sweep = [abstention_at(t) for t in np.arange(0.50, 0.91, 0.01)]
     best = max(sweep, key=lambda r: (r["balanced_accuracy"], -r["false_refusal_rate"]))
+    # The retrieval gate is a coarse first filter; the model's NO_ANSWER sentinel is the backstop.
+    # So the recommended threshold maximises refusals of out-of-scope questions while wrongly
+    # refusing at most MAX_FALSE_REFUSAL of answerable ones.
+    allowed = [r for r in sweep if r["false_refusal_rate"] <= MAX_FALSE_REFUSAL]
+    recommended = max(allowed, key=lambda r: (r["recall"], -r["false_refusal_rate"])) if allowed else None
 
     return {
         "n_answerable": len(answerable),
         "n_out_of_scope": len(unanswerable),
         "retrieval": {m: summarise(ranks[m]) for m in modes},
-        "abstention": {"current": abstention_at(thr), "best": best, "sweep": sweep},
+        "abstention": {
+            "current": abstention_at(thr),
+            "best": best,
+            "recommended": recommended,
+            "max_false_refusal": MAX_FALSE_REFUSAL,
+            "sweep": sweep,
+        },
         "confidence": {
             "answerable_median": round(statistics.median(confs_in), 4) if confs_in else None,
             "out_of_scope_median": round(statistics.median(confs_out), 4) if confs_out else None,

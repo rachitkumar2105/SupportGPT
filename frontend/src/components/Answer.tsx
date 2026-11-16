@@ -4,8 +4,12 @@ import { Icon } from "./Icon";
 
 /** Renders an answer whose [n] citations are physically patched to their source cards:
  *  hovering, focusing or tapping a citation draws a cable to the excerpt it came from. */
+// gpt-oss cites as 【1】; normalise so live streams and stored answers render the same.
+const normalise = (t: string) =>
+  t.replace(/\u3010\s*(\d+)(?:\s*\u2020[^\u3011]*)?\s*\u3011/g, "[$1]").replace(/\u3010[^\u3011]*$/, "");
+
 export function CitedAnswer({
-  text,
+  text: rawText,
   sources,
   streaming,
   abstained,
@@ -15,6 +19,7 @@ export function CitedAnswer({
   streaming?: boolean;
   abstained?: boolean;
 }) {
+  const text = normalise(rawText);
   const box = useRef<HTMLDivElement>(null);
   const [active, setActive] = useState<number | null>(null);
   const [pinned, setPinned] = useState<number | null>(null);

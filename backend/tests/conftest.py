@@ -5,7 +5,7 @@ _tmp = tempfile.mkdtemp()
 os.environ.update(
     {
         "APP_ENV": "test",
-        "SECRET_KEY": "test-secret-key-that-is-long-enough-1234567890",
+        "SECRET_KEY": "test-secret-key-that-is-long-enough-1234567890",  # gitleaks:allow (test-only dummy)
         "EMBEDDER": "hash",
         "DATABASE_URL": f"sqlite:///{_tmp}/test.db",
         "COOKIE_SECURE": "false",

@@ -109,6 +109,8 @@ def test_eval_endpoint(agent):
     m = r.json()["metrics"]
     assert m["n_answerable"] == 54 and m["n_out_of_scope"] == 14
     assert set(m["retrieval"]) == {"hybrid", "dense", "bm25"}
+    rec = m["abstention"]["recommended"]
+    assert rec is None or rec["false_refusal_rate"] <= m["abstention"]["max_false_refusal"]
     assert agent.get("/api/admin/eval").json()[0]["id"] == r.json()["id"]
 
 

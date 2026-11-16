@@ -128,3 +128,9 @@ def test_chat_rate_limit(customer):
         for i in range(14)
     ]
     assert codes.count(429) >= 1
+
+
+def test_fullwidth_citations_are_normalised(customer, fake_llm):
+    fake_llm.stream_text = "Refunds take 2 business days 【1】."
+    _, events = _ask(customer, "refund timing")
+    assert _answer(events) == "Refunds take 2 business days [1]."

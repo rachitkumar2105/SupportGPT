@@ -71,6 +71,16 @@ LLM_DOWN_TEXT = (
 )
 
 
+_FULLWIDTH_CITE = re.compile(r"\u3010\s*(\d+)(?:\s*\u2020[^\u3011]*)?\s*\u3011")
+_LIST_CITE = re.compile(r"\[(\d+(?:\s*,\s*\d+)+)\]")
+
+
+def normalize_citations(text: str) -> str:
+    """Some models (gpt-oss) cite as \u30101\u3011 or [1, 2]; normalise to [1][2]."""
+    text = _FULLWIDTH_CITE.sub(r"[\1]", text)
+    return _LIST_CITE.sub(lambda m: "".join(f"[{n.strip()}]" for n in m.group(1).split(",")), text)
+
+
 def strip_unknown_citations(text: str, n_sources: int) -> str:
     return re.sub(r"\[(\d+)\]", lambda m: m.group(0) if 1 <= int(m.group(1)) <= n_sources else "", text)
 

@@ -23,6 +23,7 @@ from ..services.assistant import (
     LLM_DOWN_TEXT,
     NO_ANSWER,
     answer_messages,
+    normalize_citations,
     retrieval_query,
     strip_unknown_citations,
     triage,
@@ -154,7 +155,7 @@ def send_message(conv_id: int, body: MessageIn, user: User = Depends(get_current
                     yield _sse("replace", {"text": answer, "sources": []})
                     sources = []
                 else:
-                    cleaned = strip_unknown_citations(answer, len(sources))
+                    cleaned = strip_unknown_citations(normalize_citations(answer), len(sources))
                     if cleaned != answer:
                         answer = cleaned
                         yield _sse("replace", {"text": answer, "sources": sources})
