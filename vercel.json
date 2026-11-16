@@ -4,8 +4,6 @@
   "installCommand": "cd frontend && npm ci --no-audit --no-fund",
   "buildCommand": "cd frontend && npm run build",
   "outputDirectory": "frontend/dist",
-  "cleanUrls": true,
-  "trailingSlash": false,
   "rewrites": [
     {
       "source": "/api/:path*",
@@ -18,7 +16,7 @@
   ],
   "headers": [
     {
-      "source": "/(.*)",
+      "source": "/((?!api/).*)",
       "headers": [
         {
           "key": "Content-Security-Policy",
