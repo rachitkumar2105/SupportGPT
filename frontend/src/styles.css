@@ -1659,6 +1659,7 @@ details.transcript .inner {
 @media (max-width: 860px) {
   .shell {
     grid-template-columns: 1fr;
+    background: none;
   }
   .rail {
     display: none;
