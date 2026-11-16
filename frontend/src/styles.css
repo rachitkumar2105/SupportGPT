@@ -1,6 +1,5 @@
-/* SupportGPT: "switchboard" identity.
-   Operator-panel green, signal-lamp amber, patch-cable red on a cool mint-grey board.
-   Bricolage Grotesque carries headings; Atkinson Hyperlegible (designed for legibility) carries everything users read. */
+/* SupportGPT: "switchboard" identity, corporate palette.
+   Geist (variable) carries headings and body; Geist Mono carries technical values. */
 
 :root {
   /* 60% ground, 30% brand blue, 10% cyan accent (primary actions only). Amber and red are status colours. */
@@ -27,8 +26,10 @@
   --focus: #2563eb;
   --on-brand: #ffffff;
 
-  --display: "Bricolage Grotesque Variable", "Segoe UI", system-ui, sans-serif;
-  --text: "Atkinson Hyperlegible", "Segoe UI", system-ui, sans-serif;
+  /* One variable sans for everything; the mono is reserved for technical values (scores, IDs, latency). */
+  --display: "Geist Variable", "Segoe UI", system-ui, sans-serif;
+  --text: "Geist Variable", "Segoe UI", system-ui, sans-serif;
+  --mono: "Geist Mono Variable", ui-monospace, "SFMono-Regular", Consolas, monospace;
 
   --r-sm: 8px;
   --r-md: 12px;
@@ -90,16 +91,16 @@ h1,
 h2,
 h3 {
   font-family: var(--display);
-  font-weight: 650;
+  font-weight: 620;
   line-height: 1.12;
-  letter-spacing: -0.015em;
+  letter-spacing: -0.02em;
   margin: 0;
   text-wrap: balance;
 }
 h1 {
   font-size: clamp(2.1rem, 1.4rem + 3.2vw, 3.6rem);
-  font-weight: 700;
-  letter-spacing: -0.03em;
+  font-weight: 680;
+  letter-spacing: -0.04em;
 }
 h2 {
   font-size: clamp(1.45rem, 1.2rem + 1vw, 1.9rem);
@@ -119,7 +120,10 @@ a {
   color: var(--switch-ink);
 }
 .num {
+  font-family: var(--mono);
+  font-size: 0.92em;
   font-variant-numeric: tabular-nums;
+  letter-spacing: -0.01em;
 }
 .muted {
   color: var(--ink-2);
@@ -172,7 +176,7 @@ a {
   border: 1px solid var(--bd);
   background: var(--bg);
   color: var(--fg);
-  font: 600 0.95rem/1 var(--text);
+  font: 560 0.95rem/1 var(--text);
   text-decoration: none;
   cursor: pointer;
   transition: border-color var(--t-fast) var(--ease), transform var(--t-fast) var(--ease), box-shadow var(--t-fast) var(--ease);
@@ -233,7 +237,7 @@ a.btn:visited,
   gap: 6px;
 }
 .field label {
-  font-weight: 700;
+  font-weight: 600;
   font-size: 0.9rem;
 }
 .field .hint {
@@ -279,7 +283,7 @@ textarea {
   padding: 2px 10px;
   border-radius: 999px;
   font-size: 0.8rem;
-  font-weight: 700;
+  font-weight: 600;
   border: 1px solid var(--line);
   background: var(--panel-2);
   color: var(--ink-2);
@@ -414,7 +418,7 @@ textarea {
   align-items: center;
   gap: 10px;
   font-family: var(--display);
-  font-weight: 700;
+  font-weight: 600;
   font-size: 1.15rem;
   color: var(--ink);
   text-decoration: none;
@@ -429,7 +433,7 @@ textarea {
   border-radius: 10px;
   color: var(--ink-2);
   text-decoration: none;
-  font-weight: 700;
+  font-weight: 600;
   position: relative;
 }
 .nav-link:hover {
@@ -486,7 +490,7 @@ textarea {
   place-items: center;
   background: var(--switch-soft);
   color: var(--switch-ink);
-  font-weight: 700;
+  font-weight: 600;
   font-size: 0.85rem;
 }
 .who-text {
@@ -592,7 +596,7 @@ textarea {
   border-color: var(--line);
 }
 .convo-item strong {
-  font-weight: 700;
+  font-weight: 600;
   font-size: 0.925rem;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -669,7 +673,7 @@ textarea {
   border-radius: 6px;
   background: var(--switch-soft);
   color: var(--switch-ink);
-  font: 700 0.75em/1 var(--text);
+  font: 600 0.72em/1 var(--mono);
   vertical-align: 0.15em;
   border: 0;
   cursor: pointer;
@@ -738,7 +742,7 @@ textarea {
   box-shadow: 0 0 0 4px var(--switch-soft);
 }
 .source strong {
-  font-weight: 700;
+  font-weight: 600;
   line-height: 1.3;
 }
 .source .src-meta {
@@ -937,7 +941,7 @@ a.row:hover {
   background: var(--panel-2);
 }
 .row-title {
-  font-weight: 700;
+  font-weight: 600;
   overflow-wrap: anywhere;
 }
 .row-meta {
@@ -970,7 +974,7 @@ a.row:hover {
   border: 0;
   background: none;
   font: inherit;
-  font-weight: 700;
+  font-weight: 600;
   font-size: 0.875rem;
   color: var(--ink-2);
   min-height: 36px;
@@ -990,7 +994,7 @@ a.row:hover {
   align-items: center;
   gap: 8px;
   font-size: 0.82rem;
-  font-weight: 700;
+  font-weight: 600;
 }
 .sla-cord {
   width: 64px;
@@ -1031,7 +1035,7 @@ table.data td {
   vertical-align: top;
 }
 table.data th {
-  font-weight: 700;
+  font-weight: 600;
   color: var(--ink-2);
   border-top: 0;
   font-size: 0.85rem;
@@ -1128,7 +1132,7 @@ details.transcript {
 details.transcript summary {
   cursor: pointer;
   padding: 12px 16px;
-  font-weight: 700;
+  font-weight: 600;
   min-height: 44px;
 }
 details.transcript .inner {
@@ -1165,7 +1169,7 @@ details.transcript .inner {
   border-radius: 10px;
   border: 1px solid var(--line);
   background: var(--panel);
-  font: 700 1rem var(--text);
+  font: 600 1rem var(--mono);
   color: var(--ink-2);
   cursor: pointer;
 }
@@ -1191,8 +1195,9 @@ details.transcript .inner {
   gap: 4px;
 }
 .stat b {
-  font: 650 1.7rem/1.1 var(--display);
+  font: 560 1.6rem/1.1 var(--mono);
   font-variant-numeric: tabular-nums;
+  letter-spacing: -0.03em;
 }
 .stat span {
   color: var(--ink-2);
@@ -1217,7 +1222,7 @@ details.transcript .inner {
 }
 .chart text {
   fill: var(--ink-3);
-  font: 12px var(--text);
+  font: 11px var(--mono);
 }
 .legend {
   display: flex;
@@ -1458,7 +1463,7 @@ details.transcript .inner {
   background: var(--lamp-soft);
   color: var(--lamp-ink);
   font-size: 0.9rem;
-  font-weight: 700;
+  font-weight: 600;
   animation: toast-in var(--t-med) var(--ease);
 }
 .board-controls {
@@ -1491,7 +1496,7 @@ details.transcript .inner {
   border-left: 1px solid var(--line);
 }
 .step .n {
-  font: 700 0.9rem var(--display);
+  font: 600 0.85rem var(--mono);
   color: var(--switch-ink);
 }
 .step p {
@@ -1707,7 +1712,7 @@ details.transcript .inner {
     padding: 8px 2px 6px;
     min-height: 56px;
     font-size: 0.7rem;
-    font-weight: 700;
+    font-weight: 600;
     color: var(--ink-3);
     text-decoration: none;
   }
