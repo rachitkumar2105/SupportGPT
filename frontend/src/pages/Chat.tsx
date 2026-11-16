@@ -356,7 +356,7 @@ export default function Chat() {
                   rows={1}
                   maxLength={2000}
                   value={draft}
-                  placeholder="Ask about billing, sign-in, sync, exports..."
+                  placeholder="Ask a question about Fieldnote"
                   onChange={(e) => {
                     setDraft(e.target.value);
                     e.target.style.height = "auto";
