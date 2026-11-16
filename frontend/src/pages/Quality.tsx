@@ -197,7 +197,7 @@ export default function Quality() {
               {m.confidence.out_of_scope_median?.toFixed(3)} for out-of-scope ones, so this gate alone can't separate them
               cleanly. It is used as a coarse first filter, and the model's own "not in the excerpts" check is the backstop.{" "}
               {m.abstention.recommended
-                ? `The recommended threshold is ${m.abstention.recommended.threshold.toFixed(2)}: it declines ${pct(m.abstention.recommended.recall)} of out-of-scope questions while wrongly declining ${pct(m.abstention.recommended.false_refusal_rate, 1)} of answerable ones (limit ${pct(m.abstention.max_false_refusal ?? 0.1)}).`
+                ? `The recommended threshold is ${m.abstention.recommended.threshold.toFixed(2)}: it declines ${pct(m.abstention.recommended.recall)} of out-of-scope questions while wrongly declining ${pct(m.abstention.recommended.false_refusal_rate, 1)} of answerable ones (limit ${pct(m.abstention.max_false_refusal ?? 0.05)}).`
                 : ""}{" "}
               The best balanced-accuracy threshold would be {m.abstention.best.threshold.toFixed(2)}, at the cost of declining{" "}
               {pct(m.abstention.best.false_refusal_rate)} of answerable questions.

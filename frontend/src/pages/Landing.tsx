@@ -38,7 +38,7 @@ const SCENARIOS: Scenario[] = [
     handoff: "Not in the help center. Handed to a person as a billing question, medium priority.",
   },
 ];
-const THRESHOLD = 0.7;
+const THRESHOLD = 0.57;
 
 function useReducedMotion() {
   const [r, setR] = useState(() => window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false);

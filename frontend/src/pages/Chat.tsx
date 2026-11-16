@@ -30,7 +30,7 @@ interface Live {
   abstained: boolean;
 }
 
-let thresholdCache: number | null = null;
+let thresholdCache: number | null = null; // fetched from /api/health
 
 export default function Chat() {
   const { id } = useParams();
@@ -47,7 +47,7 @@ export default function Chat() {
   const [showList, setShowList] = useState(false);
   const [escalating, setEscalating] = useState(false);
   const [note, setNote] = useState("");
-  const [threshold, setThreshold] = useState(thresholdCache ?? 0.7);
+  const [threshold, setThreshold] = useState(thresholdCache ?? 0.57);
   const bodyRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const abortRef = useRef<AbortController | null>(null);

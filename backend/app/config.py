@@ -90,7 +90,7 @@ def get_settings() -> Settings:
         answer_models=_list("ANSWER_MODELS", "openai/gpt-oss-120b,llama-3.3-70b-versatile"),
         triage_models=_list("TRIAGE_MODELS", "openai/gpt-oss-20b,llama-3.1-8b-instant"),
         embedder=embedder,
-        abstain_threshold=float(os.environ.get("ABSTAIN_THRESHOLD", "0.70")),
+        abstain_threshold=float(os.environ.get("ABSTAIN_THRESHOLD", "0.57")),
         admin_email=os.environ.get("ADMIN_EMAIL") or None,
         admin_password=os.environ.get("ADMIN_PASSWORD") or None,
         demo_agent_enabled=_bool("DEMO_AGENT_ENABLED", False),

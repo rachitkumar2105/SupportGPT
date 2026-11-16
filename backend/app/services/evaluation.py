@@ -21,7 +21,7 @@ from sqlalchemy.orm import Session
 from ..config import get_settings
 from . import rag
 
-MAX_FALSE_REFUSAL = 0.10
+MAX_FALSE_REFUSAL = 0.05
 GOLDEN = Path(__file__).resolve().parent.parent / "seed" / "golden.jsonl"
 
 
